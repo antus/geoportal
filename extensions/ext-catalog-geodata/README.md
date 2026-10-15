@@ -101,6 +101,8 @@ name the extension, such as `mosaikit.quotas.limits."dev.geoportal.catalog/data-
 | `web/style-grammar.js`, `src/main/java/dev/geoportal/ext/catalog/geodata/style/` | The style grammar `geoportal/style/v1` (GP-009): checks, change of type, editor panel, SLD and MapLibre |
 | `web/style-themes.js`, `web/symbology.js`, `load/DatasetValues.java` | Symbol types, styles per geometry, thematic styles and palettes, the preview map of the editor (GP-973); the symbology of the layer cards (GP-006) |
 | `web/data-rules.js` | The data rules of a published layer (GP-308): list, dialog with subject, area drawn on the map or WKT, row filter, hidden columns |
+| `web/launcher.js` | The launcher of the Geoportal apps, a widget of the home page of the console (GP-339) |
+| `web/diagnosis.js`, `access/DiagnosisResource.java`, `access/Evaluation.java`, `access/Preview.java`, `access/Diagnosis.java` | Why a person cannot see the data of a layer, and the preview of a data rule (GP-339) |
 | `web/service-rules.js`, `ServiceRules`, `ServiceRuleResource` | Data rules on external services (GP-309): the layer unavailable to the subject, and why |
 | `upload/RasterPublishing.java` | Rasters published as coverages of their COG (GP-309) |
 | `web/services.js` | The external services of the page: register, layers from the capabilities, preview, proxy on and off |
@@ -716,6 +718,58 @@ API under `/api/v1/ext/catalog-geodata/data-rules` (level `manage` on the datase
 GeoServer (area in GetMap, GetFeatureInfo and WFS; row filter; hidden column; two rules intersect; areas
 checked by PostGIS); `tests/data-rules.spec.ts` on the bench with GeoServer (the page in Italian, checks,
 GeoFence, the gate); through the gateway and AuthKey (QGIS), `tests/gateway/gateway.e2e.ts`.
+
+## The console of Geoportal (GP-339)
+
+**The launcher of the Geoportal apps.** The home page of the console (the shell of Mosaikit, MK-101) shows
+the widget **Le tue app** (`home.widget`, element `geoportal-launcher` of `web/launcher.js`): a tile for each
+of catalog, maps, dashboards and processes that the person may open, in that order, and none for the others.
+What the person may open is what their app bar shows (`GET /api/v1/shell/apps`: the apps turned on in the
+organization, a restricted one only for who holds its permission, MK-030 and MK-056) among the extensions
+active in the organization (`context.extensions`, MK-133). Each app may come from more than one extension
+(the catalog from `ext-catalog` of mosaikit-ext, or from the geodata app when that one alone is shown; maps,
+dashboards and processes from the extensions of Geoportal or of mosaikit-ext once they are rebuilt), and the
+route comes from the contribution of that extension. The apps of dashboards and processes appear when their
+extension is there and disappear when it goes, without a reload.
+
+**What GeoFence decides for a person.** `access/Evaluation.java` reads the decision from the rule set the
+catalog writes (GP-335), as GeoFence takes it: the rules in order that match the person (their user name or
+one of their roles, as the role service of the server distribution reads them, `PublishedViews.roles`), the
+workspace, the layer and the service; the `LIMIT` rules collected before the first `ALLOW` or `DENY`; once per
+role, allowed when one allows. The decision names its cause: no grant (the base `DENY`), a grant, the
+administrators, the block of data rules of the person (its `ALLOW`, or its `DENY`). `access/Preview.java` then
+asks WFS of the layer as the administrator of GeoServer with the limits of that decision (the areas as
+`INTERSECTS`, the row filter, the visible columns as `propertyName`): the features and columns the person
+receives. `AccessDiagnosisTest` (mvn test -Pgeoserver) writes the same rules into GeoFence and checks that
+GeoServer answers the person exactly that, on WMS and WFS.
+
+**The preview of a data rule.** In the dialog of a data rule, **Che cosa riceve da WFS** shows, as the rule is
+written and before it is saved, the features the subject will receive out of all, the columns without the
+hidden ones, and the first ten features. For a person (or a member of a team rule named in **Vedi come**), the
+rule set the organization would have with the rule is generated and not written (`AccessRules.withDraft`), so
+every other rule that reaches them and the level of their grant count; for a team, its rules composed with
+the new one, at the level of the grants to the team or the organization. Without a grant, or with the level
+`view`, the preview says the subject receives no feature, and why.
+
+**Why a person cannot see the data.** The second view of the app, **Perché non vede i dati**
+(`/app/geodata/accesso?layer=…&person=…`, kept in the address, MK-099), is for those who manage the dataset:
+for a person and a published layer it says what GeoServer answers them on the map (WMS) and on the data (WFS,
+WCS for a raster) and the finding: not a member; a missing grant (`view` for the map, `read` for the data);
+the map only (level `view`); data rules that hide every feature (or whose areas have nothing in common); data
+rules that limit; the whole layer. It lists the data rules that apply to the person, their own and those of
+their teams, each with the features it leaves by itself, and marks those that hide data. The rules GeoFence
+holds are brought up to date first (`ensureCurrent`), and a failed or different last write is reported.
+
+| Call | Does |
+|---|---|
+| `POST /api/v1/ext/catalog-geodata/data-rules/preview` `{layer, rule?, subject, area, cql, hidden, as?}` | level `manage`: `{allowed, cause, level, answer: {total, matched, columns, visible, hidden, sample}}`; the rule is checked as when it is saved, at least one limit not required |
+| `GET /api/v1/ext/catalog-geodata/access-diagnosis/choices` | the published layers the person manages, and the members of the organization |
+| `GET /api/v1/ext/catalog-geodata/access-diagnosis?layer=&person=` | level `manage` on the dataset: `{verdict, missing, level, administrator, services: [{service, allowed, cause}], answer, rules: [{via, subject, cql, hidden, area, alone, hides}], geofence}` |
+
+**Tests**: `EvaluationTest` and `tests/console.test.ts` (tag `GP-339`, no GeoServer); `AccessDiagnosisTest` on
+GeoServer (the preview and the diagnosis compared with the answers of WMS and WFS to the person);
+`tests/console.spec.ts` on the bench (the launcher; with GeoServer, the preview in the dialog and the page of
+the diagnosis).
 
 ## The data gateway (GP-336)
 

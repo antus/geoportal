@@ -103,6 +103,36 @@ public class PublishedViews {
         return found.stream().findFirst();
     }
 
+    /**
+     * The roles GeoServer reads for a person in an organization (GP-339), as the role service of the server
+     * distribution reads them from the same views (ADR-0016, {@code rolesdml.xml}): the identifier of the
+     * organization for its members and administrators (not its guests), the identifier followed by
+     * {@code :admin} for its administrators, the identifier of each of its teams of which the person is an
+     * owner or a member. Empty for a person without an active account.
+     */
+    public Set<String> roles(UUID organization, String username) {
+        Set<String> roles = new java.util.TreeSet<>();
+        query("""
+                with p as (select cast(? as uuid[]) orgs, lower(?) username)
+                select m.organization_id::text from mk_published.membership m
+                  join mk_published.account a on a.id = m.account_id, p
+                  where a.active and a.username = p.username and m.organization_id = any(p.orgs)
+                    and ('organization-user' = any(m.roles) or 'organization-admin' = any(m.roles))
+                union
+                select m.organization_id::text || ':admin' from mk_published.membership m
+                  join mk_published.account a on a.id = m.account_id, p
+                  where a.active and a.username = p.username and m.organization_id = any(p.orgs)
+                    and 'organization-admin' = any(m.roles)
+                union
+                select t.team_id::text from mk_published.team_member t
+                  join mk_published.account a on a.id = t.account_id
+                  join mk_published.team tm on tm.id = t.team_id, p
+                  where a.active and a.username = p.username and tm.organization_id = any(p.orgs)
+                    and t.role in ('owner', 'member')""", List.of(organization), username,
+                r -> roles.add(r.getString(1)));
+        return roles;
+    }
+
     /** The teams of an organization, by identifier, with their names (never the chats). */
     public Map<UUID, String> teams(UUID organization) {
         Map<UUID, String> teams = new LinkedHashMap<>();

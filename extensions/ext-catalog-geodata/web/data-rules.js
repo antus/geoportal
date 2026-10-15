@@ -57,6 +57,29 @@ const TEXTS = {
       'invalid-filter': 'Il filtro sulle righe non è valido.',
       'credential-missing': 'Manca una credenziale del catalogo (geoserver, geodata o published-views): chiedi a un amministratore.',
     },
+    preview: {
+      title: (who) => `Che cosa riceve da WFS ${who}`,
+      person: 'la persona',
+      team: 'il gruppo',
+      as: 'Vedi come (e-mail di un membro del gruppo, facoltativo)',
+      refresh: 'Aggiorna l’anteprima',
+      loading: 'Calcolo dell’anteprima…',
+      features: 'Elementi',
+      of: (n, total) => `${n} di ${total}`,
+      columns: 'Colonne',
+      without: (c) => ` · senza ${c}`,
+      sample: (n) => `I primi ${n} elementi che riceve`,
+      none: 'Con questa regola non riceve alcun elemento.',
+      raster: 'Un raster: le immagini che riceve sono ritagliate all’area della regola.',
+      enforced: 'Vale anche da QGIS: la applica GeoFence su GeoServer.',
+      causes: {
+        'no-grant': 'Nessun permesso sul dato raggiunge il soggetto: la regola restringe, non concede, e non riceve nulla.',
+        'view-only': 'Il soggetto ha il livello Vedere: vede la mappa, ma da WFS non riceve elementi.',
+        'data-rules-deny': 'Le aree delle regole che valgono per il soggetto non hanno parti in comune: non riceve nulla.',
+        other: 'GeoServer non gli dà il servizio.',
+      },
+      failed: (s) => `L’anteprima non si può calcolare (${s}).`,
+    },
     failed: (s) => `Non è stato possibile completare l’operazione (${s}).`,
     loadFailed: (s) => `Le regole sui dati non si possono leggere (${s}).`,
   },
@@ -105,6 +128,29 @@ const TEXTS = {
       'invalid-filter': 'The row filter is not valid.',
       'credential-missing': 'A credential of the catalog is missing (geoserver, geodata or published-views): ask an administrator.',
     },
+    preview: {
+      title: (who) => `What ${who} receives from WFS`,
+      person: 'the person',
+      team: 'the team',
+      as: 'Preview as (e-mail of a member of the team, optional)',
+      refresh: 'Refresh the preview',
+      loading: 'Computing the preview…',
+      features: 'Features',
+      of: (n, total) => `${n} of ${total}`,
+      columns: 'Columns',
+      without: (c) => ` · without ${c}`,
+      sample: (n) => `The first ${n} features received`,
+      none: 'With this rule no feature is received.',
+      raster: 'A raster: the images received are clipped to the area of the rule.',
+      enforced: 'It holds from QGIS too: GeoFence applies it on GeoServer.',
+      causes: {
+        'no-grant': 'No permission on the data reaches the subject: the rule narrows, it does not grant, and nothing is received.',
+        'view-only': 'The subject has the level View: the map, but no feature from WFS.',
+        'data-rules-deny': 'The areas of the rules for the subject have nothing in common: nothing is received.',
+        other: 'GeoServer does not serve them.',
+      },
+      failed: (s) => `The preview cannot be computed (${s}).`,
+    },
     failed: (s) => `The operation could not be completed (${s}).`,
     loadFailed: (s) => `The data rules cannot be read (${s}).`,
   },
@@ -127,6 +173,16 @@ const STYLE = `
     display: flex; flex-direction: column; gap: 8px; }
   dialog.data-rule legend { font-size: 13px; font-weight: 600; }
   dialog.data-rule .error { color: var(--mk-danger, #c0392b); }
+  dialog.data-rule aside.preview { border: 1px solid var(--mk-line); border-radius: var(--mk-radius); padding: 10px 12px;
+    display: flex; flex-direction: column; gap: 8px; background: var(--mk-bg); }
+  dialog.data-rule aside.preview h4 { margin: 0; font-size: 13px; color: var(--mk-muted); }
+  dialog.data-rule aside.preview dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; margin: 0; }
+  dialog.data-rule aside.preview dt { color: var(--mk-muted); font-size: 13px; }
+  dialog.data-rule aside.preview dd { margin: 0; }
+  dialog.data-rule aside.preview .scroll { overflow-x: auto; max-width: 100%; }
+  dialog.data-rule aside.preview table { border-collapse: collapse; font-size: 12px; }
+  dialog.data-rule aside.preview th, dialog.data-rule aside.preview td { text-align: left; padding: 3px 8px;
+    border-bottom: 1px solid var(--mk-line); white-space: nowrap; }
 `;
 
 const language = (context) => (context.locale ?? 'en').split('-')[0];
@@ -229,6 +285,10 @@ export function dataRulesSection(context, publication, say) {
       </fieldset>
       <label><span class="l-cql"></span><input name="cql" spellcheck="false"><span class="small muted cql-hint"></span></label>
       <fieldset><legend class="l-hidden"></legend><div class="columns"></div></fieldset>
+      <aside class="preview" role="complementary"><h4></h4>
+        <label class="as"><span class="l-as"></span><input name="as" type="email" autocomplete="off"></label>
+        <div class="actions"><button type="button" class="refresh"></button></div>
+        <div class="result" role="status" aria-live="polite"></div></aside>
       <p class="error" role="alert"></p>
       <div class="row-end"><button type="button" class="cancel"></button><button type="submit" class="primary confirm"></button></div>
     </form>`;
@@ -250,6 +310,8 @@ export function dataRulesSection(context, publication, say) {
     q('.l-hidden').textContent = t.hidden;
     q('.cancel').textContent = t.cancel;
     q('.confirm').textContent = t.save;
+    q('.l-as').textContent = t.preview.as;
+    q('.refresh').textContent = t.preview.refresh;
     q('select[name=team]').replaceChildren(...info.teams.map((team) => {
       const o = document.createElement('option');
       o.value = team.id;
@@ -267,6 +329,9 @@ export function dataRulesSection(context, publication, say) {
     const showKind = () => {
       q('label.email').hidden = kind.value !== 'person';
       q('label.team').hidden = kind.value !== 'team';
+      q('label.as').hidden = kind.value !== 'team';
+      q('aside.preview h4').textContent = t.preview.title(kind.value === 'team' ? t.preview.team : t.preview.person);
+      q('aside.preview').setAttribute('aria-label', q('aside.preview h4').textContent);
     };
     kind.addEventListener('change', showKind);
     if (rule) {
@@ -331,20 +396,123 @@ export function dataRulesSection(context, publication, say) {
     }
 
     q('.cancel').addEventListener('click', () => dialog.close());
-    dialog.addEventListener('close', () => dialog.remove());
+    const bodyOf = () => ({
+      layer: publication.name,
+      subject: kind.value === 'team'
+        ? { kind: 'team', id: q('select[name=team]').value }
+        : { kind: 'person', email: q('input[name=email]').value.trim() },
+      description: q('input[name=description]').value,
+      area: q('textarea[name=area]').value.trim() || null,
+      cql: q('input[name=cql]').value.trim() || null,
+      hidden: [...dialog.querySelectorAll('input[name=hidden]:checked')].map((b) => b.value),
+    });
+
+    // GP-339: what the subject will receive from WFS with the rule as it is written, before it is saved.
+    let asked = 0;
+    let timer;
+    const renderPreview = (result, p) => {
+      const parts = [];
+      const line = (text) => {
+        const el = document.createElement('p');
+        el.className = 'small';
+        el.textContent = text;
+        parts.push(el);
+      };
+      if (!p.allowed) {
+        line(t.preview.causes[p.cause] ?? t.preview.causes.other);
+      } else if (p.kind === 'raster') {
+        line(t.preview.raster);
+      } else if (p.answer) {
+        const a = p.answer;
+        const dl = document.createElement('dl');
+        const pair = (label, value) => {
+          const dt = document.createElement('dt');
+          dt.textContent = label;
+          const dd = document.createElement('dd');
+          dd.textContent = value;
+          dl.append(dt, dd);
+        };
+        pair(t.preview.features, t.preview.of(a.matched, a.total));
+        pair(t.preview.columns, t.preview.of(a.visible.length, a.columns.length)
+          + (a.hidden.length ? t.preview.without(a.hidden.join(', ')) : ''));
+        parts.push(dl);
+        if (a.matched === 0) {
+          line(t.preview.none);
+        } else if (a.sample.length > 0) {
+          const scroll = document.createElement('div');
+          scroll.className = 'scroll';
+          const table = document.createElement('table');
+          table.setAttribute('aria-label', t.preview.sample(a.sample.length));
+          const head = document.createElement('tr');
+          for (const c of a.visible) {
+            const th = document.createElement('th');
+            th.textContent = c;
+            head.append(th);
+          }
+          table.append(head);
+          for (const row of a.sample) {
+            const tr = document.createElement('tr');
+            for (const c of a.visible) {
+              const td = document.createElement('td');
+              td.textContent = row[c] == null ? '' : String(row[c]);
+              tr.append(td);
+            }
+            table.append(tr);
+          }
+          scroll.append(table);
+          parts.push(scroll);
+        }
+        line(t.preview.enforced);
+      }
+      result.replaceChildren(...parts);
+    };
+    const preview = async () => {
+      const result = q('aside.preview .result');
+      const body = bodyOf();
+      if ((body.subject.kind === 'person' && !body.subject.email) || (body.subject.kind === 'team' && !body.subject.id)) {
+        result.replaceChildren();
+        return;
+      }
+      const mine = ++asked;
+      result.textContent = t.preview.loading;
+      const as = q('input[name=as]').value.trim();
+      const response = await context.fetch(`${API}/preview`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ layer: body.layer, rule: rule?.id ?? null, subject: body.subject, area: body.area,
+          cql: body.cql, hidden: body.hidden, as: body.subject.kind === 'team' && as ? as : null }),
+      });
+      if (mine !== asked) {
+        return;
+      }
+      if (!response.ok) {
+        const problem = await problemOf(response);
+        result.textContent = [t.errors[problem.code] ?? t.preview.failed(response.status), problem.detail]
+          .filter(Boolean).join(' ');
+        return;
+      }
+      renderPreview(result, await response.json());
+    };
+    const later = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => void preview(), 500);
+    };
+    q('.refresh').addEventListener('click', () => void preview());
+    for (const control of dialog.querySelectorAll('input, select, textarea')) {
+      if (control.name !== 'description') {
+        control.addEventListener('change', later);
+      }
+    }
+    q('.draw').addEventListener('click', later);
+
+    dialog.addEventListener('close', () => {
+      clearTimeout(timer);
+      dialog.remove();
+    });
     const submit = async () => {
       const error = q('.error');
       error.textContent = '';
-      const body = {
-        layer: publication.name,
-        subject: kind.value === 'team'
-          ? { kind: 'team', id: q('select[name=team]').value }
-          : { kind: 'person', email: q('input[name=email]').value.trim() },
-        description: q('input[name=description]').value,
-        area: q('textarea[name=area]').value.trim() || null,
-        cql: q('input[name=cql]').value.trim() || null,
-        hidden: [...dialog.querySelectorAll('input[name=hidden]:checked')].map((b) => b.value),
-      };
+      const body = bodyOf();
       q('.confirm').disabled = true;
       try {
         const response = await context.fetch(rule ? `${API}/${rule.id}` : API, {
@@ -371,6 +539,9 @@ export function dataRulesSection(context, publication, say) {
     });
     section.getRootNode().append(dialog);
     dialog.showModal();
+    if (rule) {
+      void preview();
+    }
   };
 
   section.querySelector('.add').addEventListener('click', () => openDialog(null));

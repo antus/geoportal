@@ -7,10 +7,14 @@
  * language of the person (context.locale). Under them, the data uploaded to the organization
  * (uploads.js, GP-936), the services published from them on GeoServer (publications.js, GP-114) and
  * the external services with their proxy (services.js, GP-939). The page of a link to a dataset is
- * shared.js (GP-336).
+ * shared.js (GP-336). A second view of the app says why a person cannot see the data of a layer
+ * (diagnosis.js, GP-339), and the home page of the console shows the launcher of the Geoportal apps
+ * (launcher.js, GP-339).
  */
 
+import { choiceOf, defineDiagnosis, DIAGNOSIS_STATE } from './diagnosis.js';
 import { defineKind } from './kind.js';
+import { defineLauncher } from './launcher.js';
 import { definePublications } from './publications.js';
 import { defineServices } from './services.js';
 import { defineShared } from './shared.js';
@@ -19,6 +23,9 @@ import { defineUploads } from './uploads.js';
 const TEXTS = {
   it: {
     title: 'Dati geografici',
+    views: 'Viste dei dati geografici',
+    data: 'Dati',
+    access: 'Perché non vede i dati',
     subtitle: 'I dati dello spazio: file, servizi, flussi in tempo reale, database ed elaborazioni.',
     search: 'Cerca nei dati geografici',
     themes: 'Temi',
@@ -38,6 +45,9 @@ const TEXTS = {
   },
   en: {
     title: 'Geodata',
+    views: 'Views of the geodata',
+    data: 'Data',
+    access: 'Why they cannot see the data',
     subtitle: 'The data of the space: files, services, real-time streams, databases and processes.',
     search: 'Search the geodata',
     themes: 'Themes',
@@ -87,6 +97,11 @@ const STYLE = `
   dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; margin: 0; }
   dt { color: var(--mk-muted); font-size: 13px; }
   dd { margin: 0; }
+  nav.views { display: flex; gap: 4px; border-bottom: 1px solid var(--mk-line); }
+  nav.views button { font: inherit; border: none; background: none; color: var(--mk-muted); padding: 8px 12px; cursor: pointer;
+    border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  nav.views button[aria-selected=true] { color: var(--mk-fg); border-bottom-color: var(--mk-accent); }
+  .view[hidden] { display: none; }
   button.close { align-self: flex-end; font: inherit; border: 1px solid var(--mk-line); background: none;
     color: var(--mk-fg); border-radius: var(--mk-radius); padding: 4px 10px; cursor: pointer; }
 `;
@@ -96,6 +111,8 @@ const extension = {
   activate(context) {
     // GP-983: the preview and the action Publish of the geodata files of the catalog of mosaikit-ext.
     defineKind(context);
+    // GP-339: the launcher of the Geoportal apps, a widget of the home page of the console.
+    defineLauncher(context);
     if (customElements.get('catalog-app')) {
       return;
     }
@@ -107,6 +124,8 @@ const extension = {
     defineServices(context);
     // The page of a link to a dataset, also for people without an account (GP-336).
     defineShared(context);
+    // GP-339: why a person cannot see the data of a layer.
+    defineDiagnosis(context);
 
     class Catalog extends HTMLElement {
       connectedCallback() {
@@ -120,6 +139,12 @@ const extension = {
           <style>${STYLE}</style>
           <div class="page">
             <div><h1>${texts.title}</h1><p class="muted">${texts.subtitle}</p></div>
+            <nav class="views" role="tablist" aria-label="${texts.views}">
+              <button type="button" role="tab" data-view="data">${texts.data}</button>
+              <button type="button" role="tab" data-view="access">${texts.access}</button></nav>
+            <div class="view" data-view="access" role="tabpanel" aria-label="${texts.access}" hidden>
+              <geodata-access-diagnosis></geodata-access-diagnosis></div>
+            <div class="view" data-view="data" role="tabpanel" aria-label="${texts.data}">
             <div class="bar"><input type="search" aria-label="${texts.search}" placeholder="${texts.search}" /></div>
             <div class="bar themes" role="group" aria-label="${texts.themes}"></div>
             <p role="status" aria-live="polite" class="muted"></p>
@@ -128,13 +153,45 @@ const extension = {
             <catalog-uploads></catalog-uploads>
             <catalog-publications></catalog-publications>
             <catalog-services></catalog-services>
+            </div>
           </div>`;
         this.root = root;
+        // GP-339: the view of the access, kept in the address (MK-099): /accesso?layer=…&person=….
+        for (const tab of root.querySelectorAll('nav.views button')) {
+          tab.addEventListener('click', () => {
+            const view = tab.dataset.view;
+            context.address?.write(view === 'access' ? DIAGNOSIS_STATE : '');
+            this.show(view);
+          });
+        }
+        const follow = (state) => {
+          const choice = choiceOf(state);
+          this.show(choice ? 'access' : 'data');
+          if (choice) {
+            root.querySelector('geodata-access-diagnosis').choose(choice);
+          }
+        };
+        this.show(choiceOf(context.address?.read()) ? 'access' : 'data');
+        this.stopAddress = context.address?.subscribe(follow);
         root.querySelector('input').addEventListener('input', (event) => {
           this.text = event.target.value.trim().toLowerCase();
           this.render();
         });
         void this.load();
+      }
+
+      disconnectedCallback() {
+        this.stopAddress?.();
+        this.stopAddress = undefined;
+      }
+
+      show(view) {
+        for (const tab of this.root.querySelectorAll('nav.views button')) {
+          tab.setAttribute('aria-selected', String(tab.dataset.view === view));
+        }
+        for (const panel of this.root.querySelectorAll('.view')) {
+          panel.hidden = panel.dataset.view !== view;
+        }
       }
 
       async load() {
