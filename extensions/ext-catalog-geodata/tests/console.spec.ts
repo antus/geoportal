@@ -3,6 +3,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { api, bench, member, openApp, signIn, unique } from '@mosaikit/testing/playwright';
 import { FILE_MANAGER, GEODATA } from './composition.js';
+import { MANAGER } from './people.js';
 
 /**
  * GP-339, the Geoportal pages of the console, in Italian:
@@ -126,7 +127,8 @@ const GEOSERVER = !!process.env.GEOPORTAL_TEST_GEOSERVER;
 const owner = (): Person => member(0);
 const manager = (): Person => member(1);
 const colleague = (): Person => member(2);
-const stranger = (): Person => member(3);
+// The third person of the bench, without a grant on the dataset of the tests.
+const stranger = (): Person => MANAGER;
 const exception = (person: Person, permission: string): string =>
   `/api/v1/organizations/${organization()}/permissions/members/${person.user}/exceptions/${EXTENSION}:${permission}`;
 
