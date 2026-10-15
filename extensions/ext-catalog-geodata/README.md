@@ -98,6 +98,7 @@ name the extension, such as `mosaikit.quotas.limits."dev.geoportal.catalog/data-
 | `web/index.js` | The app, a custom element that the shell renders at `/app/geodata` |
 | `web/uploads.js` | The uploaded data of the page: upload dialog, details, rename, replace, download, share, delete |
 | `web/publications.js` | The services published on GeoServer (GP-114, GP-118): publishing dialog, services with their health, republish, repoint, unpublish, reconciliation |
+| `web/style-grammar.js`, `src/main/java/dev/geoportal/ext/catalog/geodata/style/` | The style grammar `geoportal/style/v1` (GP-009): checks, change of type, editor panel, SLD and MapLibre |
 | `web/data-rules.js` | The data rules of a published layer (GP-308): list, dialog with subject, area drawn on the map or WKT, row filter, hidden columns |
 | `web/service-rules.js`, `ServiceRules`, `ServiceRuleResource` | Data rules on external services (GP-309): the layer unavailable to the subject, and why |
 | `upload/RasterPublishing.java` | Rasters published as coverages of their COG (GP-309) |
@@ -449,8 +450,8 @@ GeoServer re-encodes an SLD unless it is stored with `raw=true`.
 One path makes a loaded dataset a service ([ADR-0020](../../docs/adr/0020-publishing-is-a-step-and-layers-are-served-through-the-catalog.md)):
 in the details of a loaded vector, **Pubblica** opens the publishing dialog, which shows the
 destination (the GeoServer workspace of the organization), the layer name (the technical name of the
-dataset, which the person may change) and the **style of Geoportal** (fill, opacity, stroke, width,
-size and shape of the point symbol) next to the **SLD** GeoServer will receive, translated by the
+dataset, which the person may change) and the **style of Geoportal**, a document of the grammar
+`geoportal/style/v1` (GP-009, below), next to the **SLD** GeoServer will receive, translated by the
 catalog as the style changes. Publishing defines the layer and its style and aligns GeoServer at once
 (ADR-0017); the dataset becomes `published` and the layer is listed under **Servizi pubblicati** with
 its health and the addresses of its WMS, WFS and WMTS on the origin of Geoportal.
@@ -459,6 +460,35 @@ A layer serves the table of one dataset and owns one style, named as the layer, 
 Geoportal it was translated from (`ext_catalog_geodata.geoserver_layer.dataset_id`,
 `ext_catalog_geodata.geoserver_style.source`). Mixed geometries get a rule per dimension. A raster is published as
 a coverage of its COG (GP-309, below).
+
+### The style grammar (GP-009)
+
+The style of a layer is a JSON document of `geoportal/style/v1`, documented with its JSON Schema and
+examples in [`docs/style/`](../../docs/style/README.md) of the repository
+([ADR-0029](../../docs/adr/0029-layer-styles-are-documents-of-a-json-grammar.md)): blocks `type`,
+`config`, `style` (or `geometries` for mixed layers), `label` and `legend`, with values driven by the
+data (categories, graduated, scaled) and label templates.
+
+- **The editor** of the publishing dialog is a facade over it: the type of symbol (*Punto*, *Linea*,
+  *Poligono*, *Tutte le geometrie*), the fields of that type and the label; changing the type keeps what
+  has the same meaning (a point size becomes a line width). The document is shown as JSON under
+  *Documento di stile (JSON)*, where it can be edited, and **Esporta JSON** / **Importa JSON…** save it as
+  a file and apply a file to another layer. A document with values the panel does not show is edited as
+  JSON, and the editor says so. `web/style-grammar.js` holds the checks, the change of type, the panel
+  and the MapLibre adapter that GeoLibre will use (GP-340); it has no dependency.
+- **The catalog** checks a style when it is saved (`400 invalid-style`, with the JSON pointer of each
+  problem), keeps the document, gives it back as `styleSource`, and translates it into SLD
+  (`style/StyleDocument`, `style/SldStyle`): classes become rules with their legend titles, scaled values
+  the function `Interpolate`, labels a `TextSymbolizer`. A style drawn on data of another geometry (a
+  layer repointed) is changed into that geometry by the same rules as the editor.
+- **The styles of before**, six values for every geometry, are migrated by `db/V14__style_grammar.sql`
+  into mixed documents that keep each value and translate into the same SLD; the API still accepts them
+  from older clients, migrated.
+
+The fixtures of `src/test/resources/style` are read by `StyleGrammarTest` (Java, also against the JSON
+Schema) and `tests/style.test.ts` (the browser module, `node --test`, run by `npm test` before the
+bench), so that the two implementations cannot drift; `StyleMigrationTest` (tag `postgis`) runs the
+migration, and `tests/style.spec.ts` the editor on GeoServer.
 
 API under `/api/v1/ext/catalog-geodata/publications`:
 
@@ -530,7 +560,7 @@ person.
 
 | Field | Content |
 |---|---|
-| `code` | `geoserver-unreachable`, `geoserver-refused`, `geodata-unreachable`, `credential-missing`, `name-in-use` (another layer of the catalog), `name-taken` (a layer or style of GeoServer unknown to the catalog), `not-loaded`, `not-vector` (a raster layer is not repointed), `invalid` |
+| `code` | `geoserver-unreachable`, `geoserver-refused`, `geodata-unreachable`, `credential-missing`, `name-in-use` (another layer of the catalog), `name-taken` (a layer or style of GeoServer unknown to the catalog), `not-loaded`, `not-vector` (a raster layer is not repointed), `invalid`, `invalid-style` (not a document of `geoportal/style/v1`: the detail names each problem) |
 | `action` | `retry` (may succeed later) or `correct` (change something first) |
 | `cause` | what GeoServer answered, as text: the ServiceException of OGC or the body of the error, without markup, stack trace or class names, at most 300 characters |
 | `reference` | `GP-` and eight hexadecimal digits, written to the log with the technical message and to the audit |

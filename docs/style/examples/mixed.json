@@ -1,0 +1,18 @@
+{
+  "grammar": "geoportal/style/v1",
+  "type": "mixed",
+  "geometries": {
+    "point": {
+      "config": { "shape": "square" },
+      "style": { "fill": "#ff0000", "fillOpacity": 1, "stroke": "#000000", "strokeWidth": 1, "size": 12 }
+    },
+    "line": {
+      "config": {},
+      "style": { "stroke": "#000000", "strokeOpacity": 1, "strokeWidth": 1 }
+    },
+    "polygon": {
+      "config": {},
+      "style": { "fill": "#ff0000", "fillOpacity": 1, "stroke": "#000000", "strokeWidth": 1 }
+    }
+  }
+}

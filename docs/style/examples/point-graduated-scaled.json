@@ -1,0 +1,21 @@
+{
+  "grammar": "geoportal/style/v1",
+  "type": "point",
+  "config": { "shape": "triangle" },
+  "style": {
+    "fill": {
+      "field": "livello",
+      "graduated": {
+        "breaks": [1.5, 3],
+        "values": ["#2a9d8f", "#e9c46a", "#e76f51"],
+        "labels": ["Sotto la soglia", "Attenzione", "Allerta"]
+      }
+    },
+    "fillOpacity": 1,
+    "stroke": "#264653",
+    "strokeWidth": 1,
+    "size": { "field": "portata", "scaled": { "from": [0, 500], "to": [6, 24] } }
+  },
+  "label": { "text": { "template": "{nome} ({livello} m)" }, "color": "#264653", "size": 10 },
+  "legend": { "title": "Stazioni idrometriche" }
+}

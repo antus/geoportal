@@ -1,0 +1,26 @@
+[
+  {
+    "why": "the six values of before the grammar, as the catalog kept them",
+    "legacy": { "fill": "#ff0000", "fillOpacity": 1.0, "stroke": "#000000", "strokeWidth": 1.0, "pointSize": 12.0, "pointShape": "square" },
+    "expected": {
+      "grammar": "geoportal/style/v1", "type": "mixed",
+      "geometries": {
+        "point": { "config": { "shape": "square" }, "style": { "fill": "#ff0000", "fillOpacity": 1, "stroke": "#000000", "strokeWidth": 1, "size": 12 } },
+        "line": { "config": {}, "style": { "stroke": "#000000", "strokeOpacity": 1, "strokeWidth": 1 } },
+        "polygon": { "config": {}, "style": { "fill": "#ff0000", "fillOpacity": 1, "stroke": "#000000", "strokeWidth": 1 } }
+      }
+    }
+  },
+  {
+    "why": "the default style",
+    "legacy": { "fill": "#2f80ed", "fillOpacity": 0.45, "stroke": "#1b4f9c", "strokeWidth": 1.5, "pointSize": 8, "pointShape": "circle" },
+    "expected": {
+      "grammar": "geoportal/style/v1", "type": "mixed",
+      "geometries": {
+        "point": { "config": { "shape": "circle" }, "style": { "fill": "#2f80ed", "fillOpacity": 0.45, "stroke": "#1b4f9c", "strokeWidth": 1.5, "size": 8 } },
+        "line": { "config": {}, "style": { "stroke": "#1b4f9c", "strokeOpacity": 1, "strokeWidth": 1.5 } },
+        "polygon": { "config": {}, "style": { "fill": "#2f80ed", "fillOpacity": 0.45, "stroke": "#1b4f9c", "strokeWidth": 1.5 } }
+      }
+    }
+  }
+]

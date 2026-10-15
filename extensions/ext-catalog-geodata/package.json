@@ -12,7 +12,7 @@
   "scripts": {
     "dev": "mvn -q package -DskipTests && node ../../tools/mosaikit-ext.mjs --bench -- .",
     "pretest": "playwright install chromium",
-    "test": "playwright test"
+    "test": "node --test tests/*.test.ts && playwright test"
   },
   "devDependencies": {
     "@mosaikit/testing": "https://github.com/mosaikit/mosaikit/releases/download/snapshot/mosaikit-testing-latest.tgz",

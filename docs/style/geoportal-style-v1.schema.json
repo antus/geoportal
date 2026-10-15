@@ -1,0 +1,1205 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:geoportal:style:v1",
+  "title": "geoportal/style/v1",
+  "description": "The style of a layer of Geoportal: blocks type, config, style, label and legend, with values driven by the data. Reference: docs/style/README.md. The rules a schema cannot say (breaks in increasing order, as many values as classes, ...) are checked by the implementations and listed there.",
+  "type": "object",
+  "required": [
+    "grammar",
+    "type"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "grammar": {
+      "const": "geoportal/style/v1"
+    },
+    "type": {
+      "enum": [
+        "point",
+        "line",
+        "polygon",
+        "mixed"
+      ]
+    },
+    "config": {
+      "type": "object"
+    },
+    "style": {
+      "type": "object"
+    },
+    "geometries": {
+      "type": "object"
+    },
+    "label": {
+      "$ref": "#/$defs/label"
+    },
+    "legend": {
+      "$ref": "#/$defs/legend"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "point"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "config",
+          "style"
+        ],
+        "properties": {
+          "config": {
+            "$ref": "#/$defs/pointConfig"
+          },
+          "style": {
+            "$ref": "#/$defs/pointStyle"
+          }
+        },
+        "not": {
+          "required": [
+            "geometries"
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "line"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "config",
+          "style"
+        ],
+        "properties": {
+          "config": {
+            "$ref": "#/$defs/lineConfig"
+          },
+          "style": {
+            "$ref": "#/$defs/lineStyle"
+          }
+        },
+        "not": {
+          "required": [
+            "geometries"
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "polygon"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "config",
+          "style"
+        ],
+        "properties": {
+          "config": {
+            "$ref": "#/$defs/polygonConfig"
+          },
+          "style": {
+            "$ref": "#/$defs/polygonStyle"
+          }
+        },
+        "not": {
+          "required": [
+            "geometries"
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "mixed"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "geometries"
+        ],
+        "properties": {
+          "geometries": {
+            "type": "object",
+            "required": [
+              "point",
+              "line",
+              "polygon"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "point": {
+                "$ref": "#/$defs/pointSymbol"
+              },
+              "line": {
+                "$ref": "#/$defs/lineSymbol"
+              },
+              "polygon": {
+                "$ref": "#/$defs/polygonSymbol"
+              }
+            }
+          }
+        },
+        "not": {
+          "anyOf": [
+            {
+              "required": [
+                "config"
+              ]
+            },
+            {
+              "required": [
+                "style"
+              ]
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "color": {
+      "type": "string",
+      "pattern": "^#[0-9a-fA-F]{6}$",
+      "description": "A colour, #rrggbb."
+    },
+    "field": {
+      "type": "string",
+      "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,62}$",
+      "description": "The name of an attribute of the data."
+    },
+    "scalar": {
+      "type": [
+        "string",
+        "number",
+        "boolean"
+      ]
+    },
+    "legendLabel": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "The text of a class in the legend."
+    },
+    "colorValue": {
+      "description": "A colour: a constant, or a value driven by the data.",
+      "oneOf": [
+        {
+          "$ref": "#/$defs/color"
+        },
+        {
+          "type": "object",
+          "description": "A value driven by the data: where there is a field, the value comes from the data.",
+          "required": [
+            "field"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "field": {
+              "$ref": "#/$defs/field"
+            },
+            "categories": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 100,
+              "items": {
+                "type": "object",
+                "required": [
+                  "equals",
+                  "value"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "equals": {
+                    "$ref": "#/$defs/scalar"
+                  },
+                  "value": {
+                    "$ref": "#/$defs/color"
+                  },
+                  "label": {
+                    "$ref": "#/$defs/legendLabel"
+                  }
+                }
+              }
+            },
+            "otherwise": {
+              "$ref": "#/$defs/color"
+            },
+            "graduated": {
+              "type": "object",
+              "required": [
+                "breaks",
+                "values"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "breaks": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 50,
+                  "items": {
+                    "type": "number"
+                  }
+                },
+                "values": {
+                  "type": "array",
+                  "minItems": 2,
+                  "maxItems": 51,
+                  "items": {
+                    "$ref": "#/$defs/color"
+                  }
+                },
+                "labels": {
+                  "type": "array",
+                  "minItems": 2,
+                  "maxItems": 51,
+                  "items": {
+                    "$ref": "#/$defs/legendLabel"
+                  }
+                }
+              }
+            },
+            "scaled": {
+              "type": "object",
+              "required": [
+                "from",
+                "to"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "from": {
+                  "type": "array",
+                  "minItems": 2,
+                  "maxItems": 2,
+                  "items": {
+                    "type": "number"
+                  }
+                },
+                "to": {
+                  "type": "array",
+                  "minItems": 2,
+                  "maxItems": 2,
+                  "items": {
+                    "$ref": "#/$defs/color"
+                  }
+                }
+              }
+            }
+          },
+          "dependentRequired": {
+            "categories": [
+              "otherwise"
+            ],
+            "otherwise": [
+              "categories"
+            ]
+          },
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "categories",
+                  "graduated"
+                ]
+              },
+              {
+                "required": [
+                  "categories",
+                  "scaled"
+                ]
+              },
+              {
+                "required": [
+                  "graduated",
+                  "scaled"
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "opacityValue": {
+      "description": "A opacity, from 0 to 1: a constant, or a value driven by the data.",
+      "oneOf": [
+        {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "From 0 (transparent) to 1 (opaque)."
+        },
+        {
+          "type": "object",
+          "description": "A value driven by the data: where there is a field, the value comes from the data.",
+          "required": [
+            "field"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "field": {
+              "$ref": "#/$defs/field"
+            },
+            "categories": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 100,
+              "items": {
+                "type": "object",
+                "required": [
+                  "equals",
+                  "value"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "equals": {
+                    "$ref": "#/$defs/scalar"
+                  },
+                  "value": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "description": "From 0 (transparent) to 1 (opaque)."
+                  },
+                  "label": {
+                    "$ref": "#/$defs/legendLabel"
+                  }
+                }
+              }
+            },
+            "otherwise": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "description": "From 0 (transparent) to 1 (opaque)."
+            },
+            "graduated": {
+              "type": "object",
+              "required": [
+                "breaks",
+                "values"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "breaks": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 50,
+                  "items": {
+                    "type": "number"
+                  }
+                },
+                "values": {
+                  "type": "array",
+                  "minItems": 2,
+                  "maxItems": 51,
+                  "items": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "description": "From 0 (transparent) to 1 (opaque)."
+                  }
+                },
+                "labels": {
+                  "type": "array",
+                  "minItems": 2,
+                  "maxItems": 51,
+                  "items": {
+                    "$ref": "#/$defs/legendLabel"
+                  }
+                }
+              }
+            },
+            "scaled": {
+              "type": "object",
+              "required": [
+                "from",
+                "to"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "from": {
+                  "type": "array",
+                  "minItems": 2,
+                  "maxItems": 2,
+                  "items": {
+                    "type": "number"
+                  }
+                },
+                "to": {
+                  "type": "array",
+                  "minItems": 2,
+                  "maxItems": 2,
+                  "items": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "description": "From 0 (transparent) to 1 (opaque)."
+                  }
+                }
+              }
+            }
+          },
+          "dependentRequired": {
+            "categories": [
+              "otherwise"
+            ],
+            "otherwise": [
+              "categories"
+            ]
+          },
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "categories",
+                  "graduated"
+                ]
+              },
+              {
+                "required": [
+                  "categories",
+                  "scaled"
+                ]
+              },
+              {
+                "required": [
+                  "graduated",
+                  "scaled"
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "widthValue": {
+      "description": "A width in pixels, from 0 to 64: a constant, or a value driven by the data.",
+      "oneOf": [
+        {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 64,
+          "description": "Pixels."
+        },
+        {
+          "type": "object",
+          "description": "A value driven by the data: where there is a field, the value comes from the data.",
+          "required": [
+            "field"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "field": {
+              "$ref": "#/$defs/field"
+            },
+            "categories": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 100,
+              "items": {
+                "type": "object",
+                "required": [
+                  "equals",
+                  "value"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "equals": {
+                    "$ref": "#/$defs/scalar"
+                  },
+                  "value": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 64,
+                    "description": "Pixels."
+                  },
+                  "label": {
+                    "$ref": "#/$defs/legendLabel"
+                  }
+                }
+              }
+            },
+            "otherwise": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 64,
+              "description": "Pixels."
+            },
+            "graduated": {
+              "type": "object",
+              "required": [
+                "breaks",
+                "values"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "breaks": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 50,
+                  "items": {
+                    "type": "number"
+                  }
+                },
+                "values": {
+                  "type": "array",
+                  "minItems": 2,
+                  "maxItems": 51,
+                  "items": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 64,
+                    "description": "Pixels."
+                  }
+                },
+                "labels": {
+                  "type": "array",
+                  "minItems": 2,
+                  "maxItems": 51,
+                  "items": {
+                    "$ref": "#/$defs/legendLabel"
+                  }
+                }
+              }
+            },
+            "scaled": {
+              "type": "object",
+              "required": [
+                "from",
+                "to"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "from": {
+                  "type": "array",
+                  "minItems": 2,
+                  "maxItems": 2,
+                  "items": {
+                    "type": "number"
+                  }
+                },
+                "to": {
+                  "type": "array",
+                  "minItems": 2,
+                  "maxItems": 2,
+                  "items": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 64,
+                    "description": "Pixels."
+                  }
+                }
+              }
+            }
+          },
+          "dependentRequired": {
+            "categories": [
+              "otherwise"
+            ],
+            "otherwise": [
+              "categories"
+            ]
+          },
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "categories",
+                  "graduated"
+                ]
+              },
+              {
+                "required": [
+                  "categories",
+                  "scaled"
+                ]
+              },
+              {
+                "required": [
+                  "graduated",
+                  "scaled"
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "sizeValue": {
+      "description": "A size in pixels, from 1 to 64: a constant, or a value driven by the data.",
+      "oneOf": [
+        {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 64,
+          "description": "Pixels."
+        },
+        {
+          "type": "object",
+          "description": "A value driven by the data: where there is a field, the value comes from the data.",
+          "required": [
+            "field"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "field": {
+              "$ref": "#/$defs/field"
+            },
+            "categories": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 100,
+              "items": {
+                "type": "object",
+                "required": [
+                  "equals",
+                  "value"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "equals": {
+                    "$ref": "#/$defs/scalar"
+                  },
+                  "value": {
+                    "type": "number",
+                    "minimum": 1,
+                    "maximum": 64,
+                    "description": "Pixels."
+                  },
+                  "label": {
+                    "$ref": "#/$defs/legendLabel"
+                  }
+                }
+              }
+            },
+            "otherwise": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 64,
+              "description": "Pixels."
+            },
+            "graduated": {
+              "type": "object",
+              "required": [
+                "breaks",
+                "values"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "breaks": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 50,
+                  "items": {
+                    "type": "number"
+                  }
+                },
+                "values": {
+                  "type": "array",
+                  "minItems": 2,
+                  "maxItems": 51,
+                  "items": {
+                    "type": "number",
+                    "minimum": 1,
+                    "maximum": 64,
+                    "description": "Pixels."
+                  }
+                },
+                "labels": {
+                  "type": "array",
+                  "minItems": 2,
+                  "maxItems": 51,
+                  "items": {
+                    "$ref": "#/$defs/legendLabel"
+                  }
+                }
+              }
+            },
+            "scaled": {
+              "type": "object",
+              "required": [
+                "from",
+                "to"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "from": {
+                  "type": "array",
+                  "minItems": 2,
+                  "maxItems": 2,
+                  "items": {
+                    "type": "number"
+                  }
+                },
+                "to": {
+                  "type": "array",
+                  "minItems": 2,
+                  "maxItems": 2,
+                  "items": {
+                    "type": "number",
+                    "minimum": 1,
+                    "maximum": 64,
+                    "description": "Pixels."
+                  }
+                }
+              }
+            }
+          },
+          "dependentRequired": {
+            "categories": [
+              "otherwise"
+            ],
+            "otherwise": [
+              "categories"
+            ]
+          },
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "categories",
+                  "graduated"
+                ]
+              },
+              {
+                "required": [
+                  "categories",
+                  "scaled"
+                ]
+              },
+              {
+                "required": [
+                  "graduated",
+                  "scaled"
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "textSizeValue": {
+      "description": "A text size in pixels, from 6 to 72: a constant, or a value driven by the data.",
+      "oneOf": [
+        {
+          "type": "number",
+          "minimum": 6,
+          "maximum": 72,
+          "description": "Pixels."
+        },
+        {
+          "type": "object",
+          "description": "A value driven by the data: where there is a field, the value comes from the data.",
+          "required": [
+            "field"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "field": {
+              "$ref": "#/$defs/field"
+            },
+            "categories": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 100,
+              "items": {
+                "type": "object",
+                "required": [
+                  "equals",
+                  "value"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "equals": {
+                    "$ref": "#/$defs/scalar"
+                  },
+                  "value": {
+                    "type": "number",
+                    "minimum": 6,
+                    "maximum": 72,
+                    "description": "Pixels."
+                  },
+                  "label": {
+                    "$ref": "#/$defs/legendLabel"
+                  }
+                }
+              }
+            },
+            "otherwise": {
+              "type": "number",
+              "minimum": 6,
+              "maximum": 72,
+              "description": "Pixels."
+            },
+            "graduated": {
+              "type": "object",
+              "required": [
+                "breaks",
+                "values"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "breaks": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 50,
+                  "items": {
+                    "type": "number"
+                  }
+                },
+                "values": {
+                  "type": "array",
+                  "minItems": 2,
+                  "maxItems": 51,
+                  "items": {
+                    "type": "number",
+                    "minimum": 6,
+                    "maximum": 72,
+                    "description": "Pixels."
+                  }
+                },
+                "labels": {
+                  "type": "array",
+                  "minItems": 2,
+                  "maxItems": 51,
+                  "items": {
+                    "$ref": "#/$defs/legendLabel"
+                  }
+                }
+              }
+            },
+            "scaled": {
+              "type": "object",
+              "required": [
+                "from",
+                "to"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "from": {
+                  "type": "array",
+                  "minItems": 2,
+                  "maxItems": 2,
+                  "items": {
+                    "type": "number"
+                  }
+                },
+                "to": {
+                  "type": "array",
+                  "minItems": 2,
+                  "maxItems": 2,
+                  "items": {
+                    "type": "number",
+                    "minimum": 6,
+                    "maximum": 72,
+                    "description": "Pixels."
+                  }
+                }
+              }
+            }
+          },
+          "dependentRequired": {
+            "categories": [
+              "otherwise"
+            ],
+            "otherwise": [
+              "categories"
+            ]
+          },
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "categories",
+                  "graduated"
+                ]
+              },
+              {
+                "required": [
+                  "categories",
+                  "scaled"
+                ]
+              },
+              {
+                "required": [
+                  "graduated",
+                  "scaled"
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "text": {
+      "description": "The text of a label: a constant, the value of a field, or a template whose {field} are the values of the data.",
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        {
+          "type": "object",
+          "required": [
+            "field"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "field": {
+              "$ref": "#/$defs/field"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "template"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "template": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200,
+              "pattern": "^([^{}]|\\{[A-Za-z_][A-Za-z0-9_]{0,62}\\})*$"
+            }
+          }
+        }
+      ]
+    },
+    "label": {
+      "type": "object",
+      "description": "The label block: a text drawn on each feature.",
+      "required": [
+        "text",
+        "color",
+        "size"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "text": {
+          "$ref": "#/$defs/text"
+        },
+        "color": {
+          "$ref": "#/$defs/colorValue"
+        },
+        "size": {
+          "$ref": "#/$defs/textSizeValue"
+        },
+        "halo": {
+          "type": "object",
+          "required": [
+            "color",
+            "width"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "color": {
+              "$ref": "#/$defs/color"
+            },
+            "width": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 10,
+              "description": "Pixels."
+            }
+          }
+        }
+      }
+    },
+    "legend": {
+      "type": "object",
+      "description": "The legend block.",
+      "additionalProperties": false,
+      "properties": {
+        "title": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "show": {
+          "type": "boolean"
+        }
+      }
+    },
+    "pointConfig": {
+      "type": "object",
+      "required": [
+        "shape"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "shape": {
+          "enum": [
+            "circle",
+            "square",
+            "triangle",
+            "star",
+            "cross",
+            "x"
+          ]
+        }
+      }
+    },
+    "pointStyle": {
+      "type": "object",
+      "required": [
+        "fill",
+        "fillOpacity",
+        "stroke",
+        "strokeWidth",
+        "size"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "fill": {
+          "$ref": "#/$defs/colorValue"
+        },
+        "fillOpacity": {
+          "$ref": "#/$defs/opacityValue"
+        },
+        "stroke": {
+          "$ref": "#/$defs/colorValue"
+        },
+        "strokeWidth": {
+          "$ref": "#/$defs/widthValue"
+        },
+        "size": {
+          "$ref": "#/$defs/sizeValue"
+        }
+      }
+    },
+    "lineConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "dash": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 8,
+          "items": {
+            "type": "number",
+            "minimum": 0.5,
+            "maximum": 64,
+            "description": "Pixels of dash and gap, alternately."
+          }
+        }
+      }
+    },
+    "lineStyle": {
+      "type": "object",
+      "required": [
+        "stroke",
+        "strokeOpacity",
+        "strokeWidth"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "stroke": {
+          "$ref": "#/$defs/colorValue"
+        },
+        "strokeOpacity": {
+          "$ref": "#/$defs/opacityValue"
+        },
+        "strokeWidth": {
+          "$ref": "#/$defs/widthValue"
+        }
+      }
+    },
+    "polygonConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {}
+    },
+    "polygonStyle": {
+      "type": "object",
+      "required": [
+        "fill",
+        "fillOpacity",
+        "stroke",
+        "strokeWidth"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "fill": {
+          "$ref": "#/$defs/colorValue"
+        },
+        "fillOpacity": {
+          "$ref": "#/$defs/opacityValue"
+        },
+        "stroke": {
+          "$ref": "#/$defs/colorValue"
+        },
+        "strokeWidth": {
+          "$ref": "#/$defs/widthValue"
+        }
+      }
+    },
+    "pointSymbol": {
+      "type": "object",
+      "required": [
+        "config",
+        "style"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "config": {
+          "$ref": "#/$defs/pointConfig"
+        },
+        "style": {
+          "$ref": "#/$defs/pointStyle"
+        }
+      }
+    },
+    "lineSymbol": {
+      "type": "object",
+      "required": [
+        "config",
+        "style"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "config": {
+          "$ref": "#/$defs/lineConfig"
+        },
+        "style": {
+          "$ref": "#/$defs/lineStyle"
+        }
+      }
+    },
+    "polygonSymbol": {
+      "type": "object",
+      "required": [
+        "config",
+        "style"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "config": {
+          "$ref": "#/$defs/polygonConfig"
+        },
+        "style": {
+          "$ref": "#/$defs/polygonStyle"
+        }
+      }
+    }
+  }
+}

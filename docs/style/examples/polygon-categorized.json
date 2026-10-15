@@ -1,0 +1,20 @@
+{
+  "grammar": "geoportal/style/v1",
+  "type": "polygon",
+  "config": {},
+  "style": {
+    "fill": {
+      "field": "uso",
+      "categories": [
+        { "equals": "residenziale", "value": "#f4a261", "label": "Residenziale" },
+        { "equals": "produttivo", "value": "#8d99ae", "label": "Produttivo" },
+        { "equals": "verde", "value": "#2a9d8f", "label": "Verde pubblico" }
+      ],
+      "otherwise": "#dddddd"
+    },
+    "fillOpacity": 0.6,
+    "stroke": "#555555",
+    "strokeWidth": 0.5
+  },
+  "legend": { "title": "Uso del suolo", "show": true }
+}

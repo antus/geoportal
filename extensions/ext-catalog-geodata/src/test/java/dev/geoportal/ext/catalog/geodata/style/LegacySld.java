@@ -1,57 +1,29 @@
 // SPDX-FileCopyrightText: 2026 Massimo Antonini
 // SPDX-License-Identifier: AGPL-3.0-or-later
-package dev.geoportal.ext.catalog.geodata.geoserver;
+package dev.geoportal.ext.catalog.geodata.style;
 
 import java.util.Locale;
-import java.util.Set;
-import java.util.regex.Pattern;
 
 /**
- * The style of a layer as Geoportal holds it (GP-114): the symbol a person chooses in the publishing
- * dialog, independent of the server that draws it. GeoServer receives its translation into SLD
- * ({@link #sld}), which the dialog shows next to it before publishing; the catalog keeps both, so
- * that a layer repointed to data of another geometry is translated again from the same choice.
- *
- * @param fill the color of areas and point symbols, {@code #rrggbb}
- * @param fillOpacity from 0 to 1
- * @param stroke the color of lines and outlines, {@code #rrggbb}
- * @param strokeWidth in pixels, from 0 to 20
- * @param pointSize the size of point symbols in pixels, from 1 to 64
- * @param pointShape circle, square, triangle, star, cross or x
+ * The SLD the catalog gave GeoServer for a style before the grammar (GP-114), kept as it was: the
+ * tests check that the document a style is migrated into draws the same.
  */
-public record GeoportalStyle(
-        String fill, double fillOpacity, String stroke, double strokeWidth, double pointSize, String pointShape) {
+final class LegacySld {
 
-    private static final Pattern COLOR = Pattern.compile("^#[0-9a-f]{6}$");
-    private static final Set<String> SHAPES = Set.of("circle", "square", "triangle", "star", "cross", "x");
+    private final String fill;
+    private final double fillOpacity;
+    private final String stroke;
+    private final double strokeWidth;
+    private final double pointSize;
+    private final String pointShape;
 
-    /** The style a dataset gets when the person does not choose one. */
-    public static final GeoportalStyle DEFAULT = new GeoportalStyle("#2f80ed", 0.45, "#1b4f9c", 1.5, 8, "circle");
-
-    public GeoportalStyle {
-        fill = color(fill, "fill");
-        stroke = color(stroke, "stroke");
-        range(fillOpacity, 0, 1, "fillOpacity");
-        range(strokeWidth, 0, 20, "strokeWidth");
-        range(pointSize, 1, 64, "pointSize");
-        pointShape = pointShape == null ? "circle" : pointShape.strip().toLowerCase(Locale.ROOT);
-        if (!SHAPES.contains(pointShape)) {
-            throw new IllegalArgumentException("The point shape is one of " + SHAPES.stream().sorted().toList());
-        }
-    }
-
-    private static String color(String value, String what) {
-        String c = value == null ? "" : value.strip().toLowerCase(Locale.ROOT);
-        if (!COLOR.matcher(c).matches()) {
-            throw new IllegalArgumentException("The " + what + " color is written #rrggbb, not " + value);
-        }
-        return c;
-    }
-
-    private static void range(double value, double min, double max, String what) {
-        if (Double.isNaN(value) || value < min || value > max) {
-            throw new IllegalArgumentException(what + " goes from " + num(min) + " to " + num(max));
-        }
+    LegacySld(LegacyStyle s) {
+        this.fill = s.fill();
+        this.fillOpacity = s.fillOpacity();
+        this.stroke = s.stroke();
+        this.strokeWidth = s.strokeWidth();
+        this.pointSize = s.pointSize();
+        this.pointShape = s.pointShape();
     }
 
     /**
@@ -62,7 +34,7 @@ public record GeoportalStyle(
      * @param name the name of the style in the workspace
      * @param geometryType as the loading records it: Point, MultiLineString, Geometry, ...
      */
-    public String sld(String name, String geometryType) {
+    String sld(String name, String geometryType) {
         String kind = kind(geometryType);
         StringBuilder rules = new StringBuilder();
         if (kind.equals("mixed")) {
