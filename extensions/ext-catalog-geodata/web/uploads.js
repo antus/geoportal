@@ -10,7 +10,7 @@
 import { CHANGED, openPublishDialog } from './publications.js';
 
 const API = '/api/v1/ext/catalog-geodata/uploads';
-const LEVELS = ['view', 'download', 'edit', 'edit-data', 'manage'];
+const LEVELS = ['view', 'read', 'edit', 'edit-data', 'manage'];
 
 const TEXTS = {
   it: {
@@ -66,7 +66,7 @@ const TEXTS = {
     inProgress: (t) => `«${t}» è archiviato ed è in caricamento.`,
     reloaded: (t) => `«${t}» è stato caricato.`,
     notLoaded: (t, why) => `«${t}» è archiviato ma non caricato: ${why}`,
-    levels: { view: 'Vedere', download: 'Scaricare', edit: 'Modificare', 'edit-data': 'Modificare i dati', manage: 'Gestire' },
+    levels: { view: 'Vedere', read: 'Leggere e scaricare', edit: 'Modificare', 'edit-data': 'Modificare i dati', manage: 'Gestire' },
     sample: 'Esempio',
     file: 'File',
     fileLabel: 'File da caricare',
@@ -156,7 +156,7 @@ const TEXTS = {
     inProgress: (t) => `“${t}” is stored and loading.`,
     reloaded: (t) => `“${t}” was loaded.`,
     notLoaded: (t, why) => `“${t}” is stored but not loaded: ${why}`,
-    levels: { view: 'View', download: 'Download', edit: 'Edit', 'edit-data': 'Edit the data', manage: 'Manage' },
+    levels: { view: 'View', read: 'Read and download', edit: 'Edit', 'edit-data': 'Edit the data', manage: 'Manage' },
     sample: 'Sample',
     file: 'File',
     fileLabel: 'File to upload',
@@ -490,7 +490,7 @@ export function defineUploads(context) {
         actions.append(button);
         return button;
       };
-      if (allows(d, 'download')) {
+      if (allows(d, 'read')) {
         action(texts.download, () => void this.download(d));
       }
       if (allows(d, 'edit')) {

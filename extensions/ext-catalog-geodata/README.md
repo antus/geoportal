@@ -31,11 +31,43 @@ builds them from a working tree instead; `MOSAIKIT_EXT_PACKAGES=<a directory of 
 other packages. To follow mosaikit-ext, change the commit of `mosaikit-ext.json` (and the ranges of the
 manifest when a version leaves them).
 
-Until the contracts between extensions (MK-134) and the connectors of `ext-catalog-connection`
-(EXT-010) exist, this extension talks to neither: its datasets are uploaded and listed in its own app,
-and its external OGC services are registered there. With them, a dataset becomes a file of the file
-manager with a geospatial preview, a PostGIS table a part of a PostgreSQL connection offering the use
-"map", and the external services a connector `ext-catalog-connection-ogc` (GP-983, GP-957).
+A file of a geodata format stored in the file manager is a dataset of the geodata, with its state,
+its geospatial preview and the action Publish (below, *Geodata files of the catalog*). A PostGIS table
+as a part of a PostgreSQL connection offering the use "map" waits for the connector of PostgreSQL
+(EXT-040) and the uses that other extensions contribute to a part of a connection (EXT-018, EXT-020);
+the external OGC services become the connector `ext-catalog-connection-ogc` (GP-957) on EXT-010.
+
+## Geodata files of the catalog
+
+The geodata are a kind of file of the catalog of mosaikit-ext (GP-983,
+[ADR-0028](../../docs/adr/0028-geodata-files-of-the-catalog-and-their-levels.md)), through its contract
+`file-kind` (EXT-105, MK-134), whose interfaces come in the library `ext-catalog-api` (`lib/`, listed in
+`libraries` of the manifest by the build, MK-131):
+
+- **Recognized** (`GeodataFileKind`) when a person stores a file in the catalog, or replaces it: the
+  formats of *Uploaded data* below, by the extension of the name, and for the extensions that other files
+  share by the first bytes: a zip whose first entry is a part of a Shapefile, a JSON that is GeoJSON, a
+  CSV whose header names a location (latitude and longitude, x and y, WKT or GeoJSON), a GeoPackage or a
+  TIFF by its signature. Other files stay plain files.
+- **A dataset** (`uploaded_data.catalog_file`), made in a job of the organization a few seconds after the
+  file is stored, owned by the organization and loaded as an upload is; replaced, it is loaded again;
+  deleted, its table, its COG and its layers go with it; renamed or moved, it stays as it is. It keeps a
+  copy of the content for the loading, which counts to the storage a second time (ADR-0028).
+- **Its state on the file**, which the catalog shows: `uploaded` (*Non ancora caricato*, with why),
+  `loading`, `loaded` (with the features and the reference system), `published`, `failed` (with why);
+  recorded at every change, also when the loader sidecar ends or a layer is published or withdrawn.
+- **Its levels from the file.** The dataset is a child of its file (`inherits: parent`, MK-136): `read`,
+  `edit` and `manage` on the file or on a folder above it are the same levels on the dataset, and the
+  GeoFence rules of its layers count them, and the owners of the file and of its folders as managers.
+  `view` (the layer only) and `edit-data` (GP-036) are given on the dataset itself.
+- **In the catalog**, the icon `web/dataset.svg`, the title *Dato geografico*, the preview
+  `geodata-dataset-preview` (format, state, features, reference system, extent in WGS84 and the
+  footprint: the extent, and the features of a GeoJSON up to 2 MB, read through the signed link of the
+  file) and the action *Pubblica come servizio* (`geodata-dataset-publish`, GP-114: the name of the
+  layer, then `POST publications`), all in `web/kind.js`.
+- **The catalog owns the file**: the API of the geodata answers `409` to replacing or deleting the
+  content of such a dataset. `GET uploads/files/{file}` is the dataset of a file of the catalog, for the
+  preview and the action.
 
 ## Upgrading from the catalog of Geoportal
 
@@ -74,7 +106,9 @@ name the extension, such as `mosaikit.quotas.limits."dev.geoportal.catalog/data-
 | `src/main/java/dev/geoportal/ext/catalog/geodata/editing/`, `web/editing.js` | The editing of layer data (GP-036): surveyors, layer assignments, WFS transactions |
 | `src/` | Entity, repository and REST resource under `/api/v1/ext/catalog-geodata`; `geoserver/`, the governance of GeoServer |
 | `db/` | Flyway migrations of the schema `ext_catalog_geodata`, run by the kernel at start; never edit an applied one (their checksums carry the data of the old catalog over, see Upgrading) |
-| `upgrade/adopt-catalog.sql` | The adoption of the data of the old catalog `dev.geoportal.catalog` (GP-983) |
+| `upgrade/adopt-catalog.sql` | The adoption of the data of the old catalog `dev.geoportal.catalog`, and the level download renamed read (GP-983) |
+| `upload/GeodataFileKind.java`, `upload/CatalogStates.java`, `web/kind.js` | The geodata files of the catalog of mosaikit-ext (GP-983, ADR-0028) |
+| `tests/catalog-files.spec.ts` | The tests of the geodata files of the catalog (GP-983) |
 | `tests/composition.ts`, `tests/composition.spec.ts` | The extensions of mosaikit-ext of the bench, and the tests of the composition (GP-983) |
 
 ## Build and test
@@ -139,7 +173,7 @@ API under `/api/v1/ext/catalog-geodata/uploads`:
 | `POST /{id}/load?crs=` load the current file again | `edit-data` |
 | `DELETE /{id}` the dataset, its file and its grants | `manage` |
 
-The levels of `dataset` are those of the mockup (`geoportal:dataset/permissions`): view, download,
+The levels of `dataset` are those of the mockup (`geoportal:dataset/permissions`): view, read (formerly download),
 edit, edit the data, manage; people share a dataset with a person, a team or the organization in the
 sharing dialog of Mosaikit, which the page opens with the event `shell.share`. The permission
 `upload-data` ("Caricare dati") is off until the administrators of the organization grant it.
@@ -629,7 +663,7 @@ knows it is there by `geoportal.gateway.enabled=true`.
   `.../{dataset}/ogc/{path}` (the gate), `@PermitAll`: `Sharing` answers for that dataset first, so a link
   opens only its resource. Datasets accept links (`subjects` with `link`, `linkLevel: view`), and the page
   of a link (`/shared/<secret>`) shows the element `catalog-shared-dataset`: title, a preview and the
-  addresses of WMS and WMTS through the gateway; the features of WFS need the level `download`, which a
+  addresses of WMS and WMTS through the gateway; the features of WFS need the level `read`, which a
   link does not give (GP-335).
 - **Quota**: the measure `data-requests` (unit `requests`, a counter per month) counts what the gateway
   and the gate let through, for the person who asked; platform administrators set its limit per

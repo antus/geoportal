@@ -94,7 +94,7 @@ public class Samples {
             try (InputStream content = open(sample.file())) {
                 String description = sample.description() + " Fonte: " + sample.source() + ".";
                 UploadedData data = datasets.upload(sample.file(), sample.title(), description, content, -1, true, sample.crs());
-                sharing.grant(UploadedDatasets.ref(data.id()), Subject.organization(), "download");
+                sharing.grant(UploadedDatasets.ref(data.id()), Subject.organization(), "read");
                 loaded++;
             } catch (IOException e) {
                 throw new UncheckedIOException("The sample " + sample.file() + " cannot be read", e);

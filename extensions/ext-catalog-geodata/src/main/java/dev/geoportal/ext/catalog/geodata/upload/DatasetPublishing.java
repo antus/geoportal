@@ -41,6 +41,10 @@ import org.jboss.logging.Logger;
 @ApplicationScoped
 public class DatasetPublishing {
 
+    /** GP-983: the state of a dataset made from a file of the catalog, recorded on the file. */
+    @jakarta.inject.Inject
+    CatalogStates states;
+
     private static final Logger LOG = Logger.getLogger(DatasetPublishing.class);
     private static final ObjectMapper JSON = new ObjectMapper();
 
@@ -141,6 +145,7 @@ public class DatasetPublishing {
         geoserver.check(published);
         data.published(now);
         uploads.update(data);
+        states.mirror(data);
         record("layer.published", layer, data, AuditLog.Outcome.SUCCEEDED, Map.of("style", json(style)));
         return Outcome.done(published);
     }
@@ -186,6 +191,7 @@ public class DatasetPublishing {
         geoserver.check(current);
         data.published(Instant.now());
         uploads.update(data);
+        states.mirror(data);
         record("layer.republished", name, data, AuditLog.Outcome.SUCCEEDED, Map.of("style", json(chosen)));
         return Outcome.done(current);
     }
@@ -233,9 +239,11 @@ public class DatasetPublishing {
         Instant now = Instant.now();
         to.published(now);
         uploads.update(to);
+        states.mirror(to);
         if (from != null && layersOf(from.id()).isEmpty()) {
             from.unpublished(now);
             uploads.update(from);
+            states.mirror(from);
         }
         record("layer.repointed", name, to, AuditLog.Outcome.SUCCEEDED,
                 Map.of("from", from == null ? "" : from.technicalName(), "to", to.technicalName()));
@@ -268,6 +276,7 @@ public class DatasetPublishing {
         if (data != null && layersOf(data.id()).isEmpty()) {
             data.unpublished(Instant.now());
             uploads.update(data);
+            states.mirror(data);
         }
         record("layer.unpublished", name, data, AuditLog.Outcome.SUCCEEDED, Map.of("style", ownStyle ? styleName : ""));
         return Outcome.done(null);

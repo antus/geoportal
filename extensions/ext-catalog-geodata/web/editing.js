@@ -52,7 +52,7 @@ const TEXTS = {
   },
 };
 
-const LEVELS_IT = { view: 'Vedere', download: 'Scaricare', edit: 'Modificare', 'edit-data': 'Modificare i dati', manage: 'Gestire' };
+const LEVELS_IT = { view: 'Vedere', read: 'Leggere e scaricare', edit: 'Modificare', 'edit-data': 'Modificare i dati', manage: 'Gestire' };
 
 const texts = (context) => TEXTS[(context.locale ?? 'en').split('-')[0]] ?? TEXTS.en;
 

@@ -6,8 +6,9 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * An uploaded dataset as the API returns it, with the level of the person on it (view, download,
- * edit, edit-data or manage), so that the page offers only what the backend will allow.
+ * An uploaded dataset as the API returns it, with the level of the person on it (view, read,
+ * edit, edit-data or manage), so that the page offers only what the backend will allow, and the file
+ * of the catalog it is made from (GP-983), {@code catalogFile}, or {@code null}.
  */
 public record UploadView(
         UUID id,
@@ -29,7 +30,8 @@ public record UploadView(
         Loaded loaded,
         Integer progress,
         String layer,
-        List<Choice> layers) {
+        List<Choice> layers,
+        UUID catalogFile) {
 
     /** A layer of a file with several, for the person to choose (GP-937). */
     public record Choice(String name, long features, String geometryType) {}
@@ -55,7 +57,7 @@ public record UploadView(
         return new UploadView(data.id(), data.title(), data.description(), data.technicalName(), format.id(),
                 format.title(), data.fileName(), data.size(), data.state(), data.stateCode(), data.stateReason(),
                 data.version(), data.sample(), data.createdAt(), data.updatedAt(), level, loaded(data),
-                data.loadProgress(), data.layer(), choices(data.layersJson()));
+                data.loadProgress(), data.layer(), choices(data.layersJson()), data.catalogFile());
     }
 
     private static List<Choice> choices(String json) {

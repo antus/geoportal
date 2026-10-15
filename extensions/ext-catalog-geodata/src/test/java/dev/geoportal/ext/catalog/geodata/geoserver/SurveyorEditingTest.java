@@ -90,7 +90,7 @@ class SurveyorEditingTest {
 
         RuleWriter.Outcome write(List<String> parcelsSurveyors, List<Limited> parcelsLimited, List<String> roadsSurveyors,
                 Reach... extra) {
-            List<Reach> reaches = new java.util.ArrayList<>(List.of(new Reach(Kind.ORGANIZATION, member(), "download")));
+            List<Reach> reaches = new java.util.ArrayList<>(List.of(new Reach(Kind.ORGANIZATION, member(), "read")));
             reaches.addAll(List.of(extra));
             List<LayerAccess> layers = List.of(new LayerAccess("parcels", reaches, parcelsLimited, parcelsSurveyors),
                     new LayerAccess("roads", reaches, List.of(), roadsSurveyors));
@@ -189,7 +189,7 @@ class SurveyorEditingTest {
         Person admin = new Person("admin-" + org.id() + "@example.test", RuleSet.administratorsRole(org.id()));
         String area = "SRID=32633;MULTIPOLYGON(((289500 4639000,294500 4639000,294500 4641000,289500 4641000,289500 4639000)))";
         Limits limits = new Limits(area, false, "nome <> 'p1'", List.of("fid", "nome", "geom"), Set.of());
-        RuleWriter.Outcome o = org.write(List.of(sara.name()), List.of(new Limited(sara.name(), "download", limits)), List.of());
+        RuleWriter.Outcome o = org.write(List.of(sara.name()), List.of(new Limited(sara.name(), "read", limits)), List.of());
         assertTrue(o.written(), o.toString());
 
         // Inserts: inside both is applied; outside the area, or inside it but outside the filter, is refused.

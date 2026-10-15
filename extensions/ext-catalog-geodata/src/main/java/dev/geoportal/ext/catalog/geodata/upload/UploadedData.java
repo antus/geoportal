@@ -142,6 +142,10 @@ public class UploadedData {
     @Column(nullable = false)
     private boolean sample;
 
+    /** GP-983: the file of the catalog the dataset is made from, its parent; null when uploaded here. */
+    @Column(name = "catalog_file")
+    private UUID catalogFile;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -329,6 +333,15 @@ public class UploadedData {
 
     String contentType() {
         return contentType;
+    }
+
+    /** The file of the catalog the dataset is made from (GP-983), or {@code null}. */
+    public UUID catalogFile() {
+        return catalogFile;
+    }
+
+    void madeFrom(UUID file) {
+        this.catalogFile = file;
     }
 
     long size() {

@@ -143,7 +143,7 @@ class GeoFenceRulesTest {
         }
 
         // Shared with anna (download), with the team of bruno (view): anna reads features, bruno sees the map only.
-        org.write(List.of(parcels(new Reach(Kind.PERSON, anna.name(), "download"),
+        org.write(List.of(parcels(new Reach(Kind.PERSON, anna.name(), "read"),
                 new Reach(Kind.TEAM, RuleSet.teamRole(team), "view"))));
         assertEquals(100, wfs(org, anna).rows());
         assertTrue(map(org, anna));
@@ -153,7 +153,7 @@ class GeoFenceRulesTest {
         assertFalse(map(org, carla));
 
         // Shared with the organization: every member, never a guest of the organization nor anonymous.
-        org.write(List.of(parcels(new Reach(Kind.ORGANIZATION, org.member(), "download"))));
+        org.write(List.of(parcels(new Reach(Kind.ORGANIZATION, org.member(), "read"))));
         assertEquals(100, wfs(org, carla).rows());
         assertEquals(100, wfs(org, bruno).rows());
         assertEquals("denied", wfs(org, guest).outcome());
@@ -204,19 +204,19 @@ class GeoFenceRulesTest {
         List<String> columns = List.of("fid", "nome", "stato", "riservato", "geom");
         Limits area = new Limits(WEST, false, null, columns, Set.of());
         Limits all = new Limits(WEST, false, "stato = 'attivo'", columns, Set.of("riservato"));
-        Reach teamDownload = new Reach(Kind.TEAM, RuleSet.teamRole(team), "download");
-        Reach orgDownload = new Reach(Kind.ORGANIZATION, org.member(), "download");
+        Reach teamDownload = new Reach(Kind.TEAM, RuleSet.teamRole(team), "read");
+        Reach orgDownload = new Reach(Kind.ORGANIZATION, org.member(), "read");
 
         // An area only: the western half, 50 of 100.
         org.write(List.of(new LayerAccess("parcels", List.of(teamDownload, orgDownload),
-                List.of(new Limited(dario.name(), "download", area)))));
+                List.of(new Limited(dario.name(), "read", area)))));
         assertEquals(50, wfs(org, dario).rows());
         assertEquals(100, wfs(org, elena).rows(), "elena has no data rule");
 
         // Area, rows and a hidden column: the active parcels of the western half, without riservato,
         // although the team and the organization both open the whole layer to dario.
         org.write(List.of(new LayerAccess("parcels", List.of(teamDownload, orgDownload),
-                List.of(new Limited(dario.name(), "download", all)))));
+                List.of(new Limited(dario.name(), "read", all)))));
         Features d = wfs(org, dario);
         assertEquals(30, d.rows());
         assertFalse(d.columns().contains("riservato"), d.columns().toString());
@@ -236,7 +236,7 @@ class GeoFenceRulesTest {
         assertTrue(map(org, dario));
         // Areas that have nothing in common: nothing at all.
         org.write(List.of(new LayerAccess("parcels", List.of(orgDownload),
-                List.of(new Limited(dario.name(), "download", new Limits(null, true, null, columns, Set.of()))))));
+                List.of(new Limited(dario.name(), "read", new Limits(null, true, null, columns, Set.of()))))));
         assertEquals("denied", wfs(org, dario).outcome());
         assertFalse(map(org, dario));
     }
@@ -249,8 +249,8 @@ class GeoFenceRulesTest {
         Person dario = new Person("dario-" + org.id() + "@example.test", org.member());
         List<String> columns = List.of("fid", "nome", "stato", "riservato", "geom");
         List<LayerAccess> layers = List.of(new LayerAccess("parcels",
-                List.of(new Reach(Kind.ORGANIZATION, org.member(), "download")),
-                List.of(new Limited(dario.name(), "download", new Limits(WEST, false, "stato = 'attivo'", columns,
+                List.of(new Reach(Kind.ORGANIZATION, org.member(), "read")),
+                List.of(new Limited(dario.name(), "read", new Limits(WEST, false, "stato = 'attivo'", columns,
                         Set.of("riservato"))))));
         RuleWriter.Outcome o = org.write(layers);
         assertTrue(o.written());
@@ -320,15 +320,15 @@ class GeoFenceRulesTest {
         Org alfa = organization();
         Org beta = organization();
         Person anna = new Person("anna-" + alfa.id() + "@example.test", alfa.member());
-        RuleWriter.Outcome a = alfa.write(List.of(parcels(new Reach(Kind.PERSON, anna.name(), "download"))));
+        RuleWriter.Outcome a = alfa.write(List.of(parcels(new Reach(Kind.PERSON, anna.name(), "read"))));
         List<Long> before = ours(alfa).stream().map(r -> r.path("priority").asLong()).toList();
         RuleWriter.Outcome b = beta.write(List.of(parcels(new Reach(Kind.ORGANIZATION, beta.member(), "view"))));
         assertTrue(b.base() != a.base(), "another band");
         assertEquals(before, ours(alfa).stream().map(r -> r.path("priority").asLong()).toList());
         // The rules of alfa written again, larger: they move to a free band and still move nothing.
         UUID team = UUID.randomUUID();
-        RuleWriter.Outcome again = alfa.write(List.of(parcels(new Reach(Kind.PERSON, anna.name(), "download"),
-                new Reach(Kind.TEAM, RuleSet.teamRole(team), "download"))), Set.of(), a.base());
+        RuleWriter.Outcome again = alfa.write(List.of(parcels(new Reach(Kind.PERSON, anna.name(), "read"),
+                new Reach(Kind.TEAM, RuleSet.teamRole(team), "read"))), Set.of(), a.base());
         assertEquals(List.of(), again.mismatches());
         List<Long> catchAll = new ArrayList<>();
         for (JsonNode r : geoserver.geofenceRules()) {
@@ -394,8 +394,8 @@ class GeoFenceRulesTest {
         Org org = organization();
         Person dario = new Person("dario-" + org.id() + "@example.test", org.member());
         Person elena = new Person("elena-" + org.id() + "@example.test", org.member());
-        org.write(List.of(new LayerAccess("parcels", List.of(new Reach(Kind.ORGANIZATION, org.member(), "download")),
-                List.of(new Limited(dario.name(), "download", limits(List.of(dataRule(org, DataRule.PERSON, WEST, null))))))));
+        org.write(List.of(new LayerAccess("parcels", List.of(new Reach(Kind.ORGANIZATION, org.member(), "read")),
+                List.of(new Limited(dario.name(), "read", limits(List.of(dataRule(org, DataRule.PERSON, WEST, null))))))));
         int[] d = drawn(org, dario);
         int[] e = drawn(org, elena);
         assertTrue(d[0] > 0, "dario sees the western half on the map");
@@ -414,8 +414,8 @@ class GeoFenceRulesTest {
         Org org = organization();
         UUID team = UUID.randomUUID();
         Person dario = new Person("dario-" + org.id() + "@example.test", org.member(), RuleSet.teamRole(team));
-        org.write(List.of(new LayerAccess("parcels", List.of(new Reach(Kind.TEAM, RuleSet.teamRole(team), "download")),
-                List.of(new Limited(dario.name(), "download",
+        org.write(List.of(new LayerAccess("parcels", List.of(new Reach(Kind.TEAM, RuleSet.teamRole(team), "read")),
+                List.of(new Limited(dario.name(), "read",
                         limits(List.of(dataRule(org, DataRule.TEAM, null, "stato = 'attivo'", "riservato"))))))));
         Features f = wfs(org, dario);
         assertEquals(50, f.rows());
@@ -435,8 +435,8 @@ class GeoFenceRulesTest {
         // A rule of the team of dario (west, active) and one of dario himself (south, without riservato).
         List<DataRule> both = List.of(dataRule(org, DataRule.TEAM, WEST, "stato = 'attivo'"),
                 dataRule(org, DataRule.PERSON, SOUTH, null, "riservato"));
-        org.write(List.of(new LayerAccess("parcels", List.of(new Reach(Kind.ORGANIZATION, org.member(), "download")),
-                List.of(new Limited(dario.name(), "download", limits(both))))));
+        org.write(List.of(new LayerAccess("parcels", List.of(new Reach(Kind.ORGANIZATION, org.member(), "read")),
+                List.of(new Limited(dario.name(), "read", limits(both))))));
         Features f = wfs(org, dario);
         assertEquals(15, f.rows(), "5 columns by 5 rows of the south-west quarter, the active ones");
         assertEquals(Set.of("attivo"), f.values("stato"));
@@ -450,8 +450,8 @@ class GeoFenceRulesTest {
         String east = "SRID=32633;MULTIPOLYGON(((295500 4639500,299500 4639500,299500 4649500,295500 4649500,295500 4639500)))";
         Limits none = limits(List.of(dataRule(org, DataRule.TEAM, WEST, null), dataRule(org, DataRule.PERSON, east, null)));
         assertTrue(none.empty());
-        org.write(List.of(new LayerAccess("parcels", List.of(new Reach(Kind.ORGANIZATION, org.member(), "download")),
-                List.of(new Limited(dario.name(), "download", none)))));
+        org.write(List.of(new LayerAccess("parcels", List.of(new Reach(Kind.ORGANIZATION, org.member(), "read")),
+                List.of(new Limited(dario.name(), "read", none)))));
         assertEquals("denied", wfs(org, dario).outcome());
     }
 

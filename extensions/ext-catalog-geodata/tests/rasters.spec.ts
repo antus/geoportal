@@ -142,7 +142,7 @@ test.describe('GP-309 rasters on GeoServer', () => {
     // A rule limits what a grant opens: the colleague reads the raster first.
     const grant = await api(owner(), `/api/v1/sharing/resources/${EXTENSION}/dataset/${dataset.id}/grants`, {
       method: 'PUT',
-      body: JSON.stringify({ subject: { kind: 'person', id: await accountOf(colleague()) }, level: 'download' }),
+      body: JSON.stringify({ subject: { kind: 'person', id: await accountOf(colleague()) }, level: 'read' }),
     });
     expect(grant.status, JSON.stringify(grant.body)).toBeLessThan(300);
     const created = await api(owner(), RULES, { method: 'POST', body: JSON.stringify({ layer, subject, area }) });

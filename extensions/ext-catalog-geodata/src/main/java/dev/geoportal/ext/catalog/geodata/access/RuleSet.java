@@ -46,7 +46,7 @@ public final class RuleSet {
     /** The services of the level {@code view}. */
     static final List<String> VIEW = List.of("WMS", "GWC");
 
-    /** The services of the levels that read the data: download and above. */
+    /** The services of the levels that read the data: read and above. */
     static final List<String> DATA = List.of("WMS", "GWC", "WFS", "WCS");
 
     /** WFS requests that write or lock, refused in every workspace but to the surveyors of a layer. */
@@ -59,7 +59,7 @@ public final class RuleSet {
     static final List<String> EDITS = List.of("TRANSACTION", "LOCKFEATURE");
 
     /** The levels of a dataset, lowest first, as in manifest.yaml. */
-    public static final List<String> LEVELS = List.of("view", "download", "edit", "edit-data", "manage");
+    public static final List<String> LEVELS = List.of("view", "read", "edit", "edit-data", "manage");
 
     private RuleSet() {}
 

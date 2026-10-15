@@ -299,9 +299,9 @@ public class PublicationResource {
             }
         }
         // The services of the level, as the GeoFence rules give them (GP-335, ADR-0005): view is the map
-        // and its tiles, the features need download.
+        // and its tiles, the features need read.
         if (OgcGate.service(path, rawQuery).equals("WFS")) {
-            sharing.require(ref(layer.datasetId()), "download");
+            sharing.require(ref(layer.datasetId()), "read");
         }
         access.ensureCurrent();
         // The gate reaches GeoServer as its administrator and cannot apply data rules (GP-308): a person

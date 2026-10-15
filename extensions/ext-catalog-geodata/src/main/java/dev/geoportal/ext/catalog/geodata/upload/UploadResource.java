@@ -168,6 +168,22 @@ public class UploadResource {
         }
     }
 
+    /**
+     * GP-983: the dataset made from a file of the catalog, for the preview and the actions the catalog
+     * shows with the file; 404 when the file is not geodata, or the person does not see its dataset.
+     */
+    @GET
+    @Path("files/{file}")
+    @Transactional
+    public UploadView ofFile(@PathParam("file") UUID file) {
+        UploadedData data = uploads.byCatalogFile(file).orElseThrow(NotFoundException::new);
+        if (sharing.level(ref(data.id())).isEmpty()) {
+            throw new NotFoundException();
+        }
+        datasets.advance(data, edits(data));
+        return view(data);
+    }
+
     @GET
     @Path("{id}")
     @Transactional
@@ -206,6 +222,7 @@ public class UploadResource {
         // The source data of a published layer: the editing limits of GP-036 too.
         editing.requireSourceWrite(id);
         UploadedData data = find(id);
+        inCatalog(data, "Replace the file in the catalog: its dataset follows.");
         try {
             return view(datasets.replace(data, name, content, size(length), crs, layer));
         } catch (UploadLimit.TooLarge e) {
@@ -236,13 +253,13 @@ public class UploadResource {
         }
     }
 
-    /** The file of the dataset (level download). */
+    /** The file of the dataset (level read). */
     @GET
     @Path("{id}/content")
     @Produces(MediaType.WILDCARD)
     @Transactional
     public Response download(@PathParam("id") UUID id) {
-        sharing.require(ref(id), "download");
+        sharing.require(ref(id), "read");
         UploadedData data = find(id);
         FileContent content = files.read(EXTENSION, data.fileId());
         audit.record(EXTENSION, new AuditLog.Entry("dataset.downloaded", TYPE + "/" + id,
@@ -265,6 +282,7 @@ public class UploadResource {
     @Transactional
     public Response delete(@PathParam("id") UUID id) {
         sharing.require(ref(id), "manage");
+        inCatalog(find(id), "Delete the file in the catalog: its dataset goes with it.");
         try {
             datasets.delete(find(id));
         } catch (SecurityException e) {
@@ -320,6 +338,23 @@ public class UploadResource {
     }
 
     /** A problem detail with the reason of the refusal, which the page shows as it is. */
+    /**
+     * GP-983: the content of a dataset made from a file of the catalog is that file, which people replace
+     * and delete in the catalog; here the dataset only follows it (409 with what to do instead).
+     */
+    private static void inCatalog(UploadedData data, String what) {
+        if (data.catalogFile() == null) {
+            return;
+        }
+        Map<String, Object> problem = new LinkedHashMap<>();
+        problem.put("title", "Conflict");
+        problem.put("status", 409);
+        problem.put("detail", "This dataset is a file of the catalog. " + what);
+        problem.put("catalogFile", data.catalogFile().toString());
+        throw new WebApplicationException(what, Response.status(Response.Status.CONFLICT)
+                .type("application/problem+json").entity(problem).build());
+    }
+
     private static WebApplicationException refused(RuntimeException e) {
         Map<String, Object> problem = new LinkedHashMap<>();
         problem.put("title", "Bad Request");

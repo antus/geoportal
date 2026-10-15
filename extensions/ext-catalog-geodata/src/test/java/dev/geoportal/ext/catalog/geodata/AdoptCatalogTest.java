@@ -96,9 +96,14 @@ class AdoptCatalogTest {
                     amount bigint not null);
                 create table mk_kernel.service_identity (id uuid primary key, name varchar(100) not null,
                     apis varchar(2000) not null default '');
+                create table mk_kernel.resource_grant (id uuid primary key, resource_id uuid not null
+                    references mk_kernel.resource (id), level varchar(64) not null);
+                create table mk_kernel.sharing_level (extension_id varchar(255) not null, type varchar(48) not null,
+                    level varchar(64) not null, rank integer not null, primary key (extension_id, type, level));
                 create view mk_kernel.resource_view as select * from mk_kernel.resource;
                 """);
-        migrate("ext_catalog");
+        // The catalog as it was: its migrations up to V11, the last one before GP-983.
+        migrate("ext_catalog", "11");
         sql("""
                 insert into ext_catalog.sample_load (organization_id, loaded_at, loaded) values ('%s', now(), 7);
                 insert into mk_kernel.resource values
@@ -106,13 +111,18 @@ class AdoptCatalogTest {
                     (gen_random_uuid(), '%s', 'service', '7', '/app/catalog'),
                     (gen_random_uuid(), 'dev.geoportal.maps', 'map', '1', '/app/maps?map=1'),
                     (gen_random_uuid(), 'io.github.mosaikit.ext.catalog', 'folder', '1', '/app/catalog?folder=1');
+                insert into mk_kernel.resource_grant select gen_random_uuid(), id, 'download' from mk_kernel.resource
+                    where type = 'dataset';
+                insert into mk_kernel.resource_grant select gen_random_uuid(), id, 'view' from mk_kernel.resource
+                    where type = 'service';
+                insert into mk_kernel.sharing_level values ('%s', 'dataset', 'view', 0), ('%s', 'dataset', 'download', 1);
                 insert into mk_kernel.permission_grant values (gen_random_uuid(), '%s', 'upload-data'),
                     (gen_random_uuid(), 'dev.geoportal.maps', 'edit-maps');
                 insert into mk_kernel.secret values (gen_random_uuid(), '%s', 'geoserver'), (gen_random_uuid(), null, 'mail');
                 insert into mk_kernel.quota_total values ('%s/data-requests', '2026-10', 12), ('mosaikit/storage', '', 5);
                 insert into mk_kernel.service_identity values (gen_random_uuid(), 'gateway', 'catalog'),
                     (gen_random_uuid(), 'other', 'maps, catalog,dashboards'), (gen_random_uuid(), 'files', 'catalogs');
-                """.formatted(ORG, OLD, OLD, OLD, OLD, OLD));
+                """.formatted(ORG, OLD, OLD, OLD, OLD, OLD, OLD, OLD));
     }
 
     @Test
@@ -121,9 +131,10 @@ class AdoptCatalogTest {
 
         assertFalse(exists("select 1 from pg_namespace where nspname = 'ext_catalog'"), "ext_catalog is free");
         assertEquals("7", value("select loaded from ext_catalog_geodata.sample_load where organization_id = '" + ORG + "'"));
-        MigrateResult again = migrate("ext_catalog_geodata");
-        assertEquals(0, again.migrationsExecuted, "the migrations of the catalog are those of ext-catalog-geodata");
-        assertEquals("11", value("select max(version::int) from ext_catalog_geodata.flyway_schema_history"
+        MigrateResult again = migrate("ext_catalog_geodata", null);
+        assertEquals(1, again.migrationsExecuted,
+                "the migrations of the catalog are those of ext-catalog-geodata, which adds only its own (V12)");
+        assertEquals("12", value("select max(version::int) from ext_catalog_geodata.flyway_schema_history"
                 + " where version is not null and success"));
 
         assertEquals("2", value("select count(*) from mk_kernel.resource where extension_id = '" + NEW + "'"));
@@ -141,6 +152,12 @@ class AdoptCatalogTest {
         assertEquals("catalog-geodata", value("select apis from mk_kernel.service_identity where name = 'gateway'"));
         assertEquals("maps,catalog-geodata,dashboards", value("select apis from mk_kernel.service_identity where name = 'other'"));
         assertEquals("catalogs", value("select apis from mk_kernel.service_identity where name = 'files'"));
+        // ADR-0028: the level download of datasets is read.
+        assertEquals("read", value("select g.level from mk_kernel.resource_grant g join mk_kernel.resource r"
+                + " on r.id = g.resource_id where r.type = 'dataset'"));
+        assertEquals("view", value("select g.level from mk_kernel.resource_grant g join mk_kernel.resource r"
+                + " on r.id = g.resource_id where r.type = 'service'"));
+        assertEquals("read", value("select level from mk_kernel.sharing_level where rank = 1"));
 
         // Run again, it changes nothing.
         adopt();
@@ -151,7 +168,7 @@ class AdoptCatalogTest {
 
     @Test
     void withGeodataAlreadyStartedItRefusesAndChangesNothing() throws Exception {
-        migrate("ext_catalog_geodata");
+        migrate("ext_catalog_geodata", null);
 
         SQLException refused = assertThrows(SQLException.class, this::adopt);
         assertTrue(refused.getMessage().contains("both ext_catalog"), refused.getMessage());
@@ -182,14 +199,16 @@ class AdoptCatalogTest {
         assertFalse(exists("select 1 from pg_namespace where nspname = 'ext_catalog_geodata'"));
     }
 
-    private MigrateResult migrate(String schema) {
-        return Flyway.configure()
+    private MigrateResult migrate(String schema, String target) {
+        var flyway = Flyway.configure()
                 .dataSource(source)
                 .schemas(schema)
                 .createSchemas(true)
-                .locations("filesystem:" + Path.of("db").toAbsolutePath())
-                .load()
-                .migrate();
+                .locations("filesystem:" + Path.of("db").toAbsolutePath());
+        if (target != null) {
+            flyway.target(target);
+        }
+        return flyway.load().migrate();
     }
 
     private void adopt() throws Exception {

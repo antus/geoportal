@@ -185,7 +185,7 @@ test.describe('GP-335 on GeoServer', () => {
     // publications, after the check interval, writes it.
     const org = await api(owner(), `/api/v1/sharing/resources/${EXTENSION}/dataset/${dataset.id}/grants`, {
       method: 'PUT',
-      body: JSON.stringify({ subject: { kind: 'organization' }, level: 'download' }),
+      body: JSON.stringify({ subject: { kind: 'organization' }, level: 'read' }),
     });
     expect(org.status, JSON.stringify(org.body)).toBeLessThan(300);
     await new Promise((resolve) => setTimeout(resolve, 16_000));

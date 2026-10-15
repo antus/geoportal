@@ -36,7 +36,7 @@ class RuleSetTest {
     void grantsBecomeUserAndRoleRulesPerServiceOfTheLevelBetweenTheWriteDenialsAndTheBaseDeny() {
         List<GeoFenceRule> rules = RuleSet.of(WS, ORG, List.of(new LayerAccess("parcels", List.of(
                 new Reach(Kind.PERSON, "anna@example.test", "view"),
-                new Reach(Kind.PERSON, "anna@example.test", "download"),
+                new Reach(Kind.PERSON, "anna@example.test", "read"),
                 new Reach(Kind.TEAM, RuleSet.teamRole(TEAM), "view"),
                 new Reach(Kind.ORGANIZATION, RuleSet.organizationRole(ORG), "edit"),
                 new Reach(Kind.PUBLIC, null, "view")), List.of())));
@@ -67,9 +67,9 @@ class RuleSetTest {
         Limits limits = new Limits(AREA, false, "stato = 'attivo'", List.of("fid", "nome", "riservato", "geom"),
                 Set.of("riservato"));
         List<GeoFenceRule> rules = RuleSet.of(WS, ORG, List.of(new LayerAccess("parcels", List.of(
-                new Reach(Kind.PERSON, "dario@example.test", "download"),
-                new Reach(Kind.TEAM, RuleSet.teamRole(TEAM), "download")),
-                List.of(new Limited("dario@example.test", "download", limits)))));
+                new Reach(Kind.PERSON, "dario@example.test", "read"),
+                new Reach(Kind.TEAM, RuleSet.teamRole(TEAM), "read")),
+                List.of(new Limited("dario@example.test", "read", limits)))));
         List<String> d = described(rules);
         assertEquals("LIMIT user dario@example.test on parcels with an area", d.get(3));
         assertEquals("ALLOW user dario@example.test on parcels WMS rows stato = 'attivo' hiding 1 column", d.get(4));

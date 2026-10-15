@@ -22,6 +22,7 @@
 -- nothing, when ext_catalog_geodata exists next to the old ext_catalog (ext-catalog-geodata was started
 -- before this script: see the README of the extension). The audit log keeps the names it was written
 -- with. Settings in files (application.properties, values of Helm) are changed by hand: see the README.
+-- A second statement, below, renames the level download of datasets to read (ADR-0028).
 do $adopt$
 declare
     old_id constant text := 'dev.geoportal.catalog';
@@ -94,3 +95,31 @@ begin
     end if;
 end
 $adopt$;
+
+-- GP-983, ADR-0028: the level download of the datasets is read, the name of the level of the files of the
+-- catalog that reaches a dataset made from a file (MK-136). The grants at download are grants at read,
+-- which gives the same: the features and the file. Runs every time, after the adoption above or without
+-- it; it changes nothing when there is no grant at download.
+do $levels$
+declare
+    geodata constant text := 'dev.geoportal.ext.catalog.geodata';
+    changed bigint;
+begin
+    if to_regclass('mk_kernel.resource_grant') is null or to_regclass('mk_kernel.resource') is null then
+        return;
+    end if;
+    update mk_kernel.resource_grant g set level = 'read'
+    from mk_kernel.resource r
+    where g.resource_id = r.id and r.extension_id = geodata and r.type = 'dataset' and g.level = 'download';
+    get diagnostics changed = row_count;
+    if changed > 0 then
+        raise notice 'GP-983: % grants on datasets at download are now at read', changed;
+    end if;
+    if to_regclass('mk_kernel.sharing_level') is not null then
+        update mk_kernel.sharing_level set level = 'read'
+        where extension_id = geodata and type = 'dataset' and level = 'download'
+          and not exists (select 1 from mk_kernel.sharing_level
+                          where extension_id = geodata and type = 'dataset' and level = 'read');
+    end if;
+end
+$levels$;

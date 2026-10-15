@@ -178,6 +178,19 @@ final class CsvReader {
         return header == null ? "" : header.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]", "");
     }
 
+    /**
+     * GP-983: whether a first line of a CSV names the columns of a location the catalog loads: latitude
+     * and longitude, x and y, a WKT or a GeoJSON column. How the geodata recognize a CSV among the files
+     * of the catalog, where most CSV files are not geodata.
+     */
+    static boolean locates(String firstLine) {
+        String line = firstLine.startsWith("﻿") ? firstLine.substring(1) : firstLine;
+        String[] header = parse(line, separator(line)).stream().findFirst().orElse(new String[0]);
+        return column(header, WKT) >= 0 || column(header, GEOJSON) >= 0
+                || (column(header, LATITUDE) >= 0 && column(header, LONGITUDE) >= 0)
+                || (column(header, X) >= 0 && column(header, Y) >= 0);
+    }
+
     /** The separator of the first line, outside quotes. */
     static char separator(String text) {
         int[] counts = new int[4];

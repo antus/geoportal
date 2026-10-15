@@ -122,7 +122,7 @@ public class AccessRules {
         List<PublishedLayer> layers = geoserver.published();
         Map<UUID, List<Reach>> reaches = new HashMap<>();
         Map<UUID, List<Grant>> grants = new HashMap<>();
-        Map<UUID, UUID> owners = new HashMap<>();
+        Map<UUID, Set<UUID>> owners = new HashMap<>();
         Set<UUID> people = new HashSet<>();
         for (PublishedLayer layer : layers) {
             UUID dataset = layer.datasetId();
@@ -130,12 +130,19 @@ public class AccessRules {
                 continue;
             }
             ResourceRef ref = CatalogExtension.dataset(dataset);
-            List<Grant> of = sharing.grants(ref);
+            // GP-983, ADR-0028: a dataset made from a file of the catalog inherits the levels on the file and
+            // on the folders above it (MK-136), and their owners manage it as the owner of the dataset does.
+            List<Grant> of = new ArrayList<>(sharing.grants(ref));
+            of.addAll(sharing.inheritedGrants(ref));
             grants.put(dataset, of);
-            resources.find(ref).map(Resource::owner).ifPresent(o -> {
-                owners.put(dataset, o);
-                people.add(o);
+            Set<UUID> managing = new HashSet<>();
+            above(ref).forEach(r -> {
+                if (r.owner() != null) {
+                    managing.add(r.owner());
+                }
             });
+            owners.put(dataset, managing);
+            people.addAll(managing);
             of.stream().map(Grant::subject).filter(s -> s instanceof Subject.Person)
                     .forEach(s -> people.add(((Subject.Person) s).account()));
         }
@@ -182,9 +189,10 @@ public class AccessRules {
         }
         for (Map.Entry<UUID, List<Grant>> e : grants.entrySet()) {
             List<Reach> list = new ArrayList<>();
-            UUID owner = owners.get(e.getKey());
-            if (owner != null && names.containsKey(owner)) {
-                list.add(new Reach(Kind.PERSON, names.get(owner), RuleSet.LEVELS.getLast()));
+            for (UUID owner : owners.getOrDefault(e.getKey(), Set.of())) {
+                if (names.containsKey(owner)) {
+                    list.add(new Reach(Kind.PERSON, names.get(owner), RuleSet.LEVELS.getLast()));
+                }
             }
             for (Grant g : e.getValue()) {
                 Reach r = reach(g, space.organization(), names);
@@ -377,6 +385,30 @@ public class AccessRules {
     }
 
     // Writing -------------------------------------------------------------------------------------
+
+    /**
+     * A resource and the resources above it, through their parents (MK-054): for a dataset made from a file
+     * of the catalog, the file and its folders. Stops at a resource the registry does not answer for.
+     */
+    private List<Resource> above(ResourceRef ref) {
+        List<Resource> found = new ArrayList<>();
+        Set<ResourceRef> seen = new HashSet<>();
+        ResourceRef next = ref;
+        while (next != null && seen.add(next) && found.size() < 64) {
+            Optional<Resource> resource;
+            try {
+                resource = resources.find(next);
+            } catch (RuntimeException e) {
+                break;
+            }
+            if (resource.isEmpty()) {
+                break;
+            }
+            found.add(resource.get());
+            next = resource.get().parent();
+        }
+        return found;
+    }
 
     /** Every alignment applied is followed by the rules. */
     void aligned(@Observes Aligned event) {

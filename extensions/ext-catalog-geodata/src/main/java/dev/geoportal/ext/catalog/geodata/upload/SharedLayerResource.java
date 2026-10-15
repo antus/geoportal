@@ -106,10 +106,10 @@ public class SharedLayerResource {
     private Response gate(String method, UUID dataset, String path, UriInfo uri, HttpHeaders headers) {
         PublishedLayer layer = layerOf(dataset);
         String rawQuery = uri.getRequestUri().getRawQuery();
-        // As for people (GP-335): view is the map and its tiles, the features need download, which a
+        // As for people (GP-335): view is the map and its tiles, the features need read, which a
         // link (linkLevel view) does not give.
         if (OgcGate.service(path, rawQuery).equals("WFS")) {
-            sharing.require(ref(dataset), "download");
+            sharing.require(ref(dataset), "read");
         }
         DataRequests.count(quotas, EXTENSION);
         String base = headers.getHeaderString(GATEWAY_BASE);

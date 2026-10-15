@@ -178,10 +178,10 @@ test.describe('on GeoServer', () => {
     expect(r.status, JSON.stringify(r.body)).toBe(201);
     const d = r.body as Upload;
     expect(d.state, d.stateReason ?? '').toBe('loaded');
-    // Shared with the organization at download: both read it, neither manages it.
+    // Shared with the organization at read: both read it, neither manages it.
     const g = await api(manager(), `/api/v1/sharing/resources/${EXTENSION}/dataset/${d.id}/grants`, {
       method: 'PUT',
-      body: JSON.stringify({ subject: { kind: 'organization' }, level: 'download' }),
+      body: JSON.stringify({ subject: { kind: 'organization' }, level: 'read' }),
     });
     expect(g.status, JSON.stringify(g.body)).toBeLessThan(300);
     return d;

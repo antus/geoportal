@@ -388,7 +388,7 @@ test('GP-335 GP-308 data rules hold the same for a person through the gateway an
   const grant = await api(ada, `/api/v1/sharing/resources/${EXTENSION}/dataset/${state.dataset}/grants`, {
     method: 'PUT',
     org: ORG,
-    body: JSON.stringify({ subject: { kind: 'person', id: danId }, level: 'download' }),
+    body: JSON.stringify({ subject: { kind: 'person', id: danId }, level: 'read' }),
   });
   expect(grant.status, JSON.stringify(grant.body)).toBeLessThan(300);
   const rule = async (body: object): Promise<string> => {

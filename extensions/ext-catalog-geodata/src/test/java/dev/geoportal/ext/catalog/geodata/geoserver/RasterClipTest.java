@@ -113,8 +113,8 @@ class RasterClipTest {
                 new LayerDefinition("dem", "dem", "Rilievo", "", "EPSG:32633", null), Instant.now());
         dem.raster(true);
         List<GeoFenceRule> rules = AccessRules.clipRasters(RuleSet.of(ws, space.organization(), List.of(
-                new LayerAccess("dem", List.of(new Reach(Kind.ORGANIZATION, member, "download")),
-                        List.of(new Limited(dario.name(), "download", new Limits(WEST, false, null, List.of(), Set.of())))))),
+                new LayerAccess("dem", List.of(new Reach(Kind.ORGANIZATION, member, "read")),
+                        List.of(new Limited(dario.name(), "read", new Limits(WEST, false, null, List.of(), Set.of())))))),
                 List.of(dem));
         assertTrue(rules.stream().anyMatch(r -> r.access() == GeoFenceRule.Access.LIMIT && r.describe().contains("CLIP")
                 || r.canonical().contains("spatialFilterType=CLIP")), rules.toString());

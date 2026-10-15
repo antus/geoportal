@@ -7,10 +7,17 @@ kind: [app, service]
 platform: '>=0.1 <1'
 # GP-983, ADR-0024: the geospatial part of the catalog, composed with the file manager and the
 # connections of mosaikit-ext (MK-132: the kernel starts this extension only when both are present in
-# a version of the range). Until the contracts of MK-134 exist it talks to neither of them.
+# a version of the range). Its files are a kind of file of the catalog (EXT-105, ADR-0028).
 requires:
   io.github.mosaikit.ext.catalog: '^0.1'
   io.github.mosaikit.ext.catalog.connection: '^0.1'
+# GP-983: geodata files are a kind of file of the catalog (EXT-105), through its contract file-kind
+# (MK-134), whose interfaces come in the library ext-catalog-api (lib/, MK-131).
+contracts:
+  implements:
+    - contract: io.github.mosaikit.ext.catalog/file-kind
+      version: 1
+      api: io.github.mosaikit.ext:ext-catalog-api
 backend:
   jar: lib/ext-catalog-geodata.jar
   # Not "catalog": that API is the file manager of mosaikit-ext.
@@ -94,14 +101,20 @@ resources:
     i18n:
       it: { title: Dato }
     levels:
+      # The published layer only: its map and tiles, not its features nor its file.
       - { name: view, title: View, i18n: { it: { title: Vedere } } }
-      - { name: download, title: Download, i18n: { it: { title: Scaricare } } }
+      # The features and the file too: named as the level read of the files of the catalog, which
+      # reaches a dataset made from a file (ADR-0028); it was download until GP-983.
+      - { name: read, title: Read and download, i18n: { it: { title: Leggere e scaricare } } }
       - { name: edit, title: Edit, edits: true, i18n: { it: { title: Modificare } } }
       - { name: edit-data, title: Edit the data, edits: true, i18n: { it: { title: Modificare i dati } } }
       - { name: manage, title: Manage, edits: true, i18n: { it: { title: Gestire } } }
     # GP-336: a link opens the published layer of the dataset, to view only, also without an account.
     subjects: [person, group, organization, link]
     linkLevel: view
+    # GP-983, ADR-0028: a dataset made from a file of the catalog has that file as its parent, and the
+    # levels read, edit and manage on the file, or on a folder above it, reach the dataset (MK-136).
+    inherits: parent
   - type: service
     title: External service
     i18n: { it: { title: Servizio esterno } }
@@ -120,6 +133,31 @@ measures:
     i18n:
       it: { label: Richieste ai dati geografici }
 contributes:
+  # GP-983: the geodata files of the catalog (EXT-105), with their geospatial preview, the states of
+  # their loading and the action Publish.
+  catalog.file-kind:
+    - id: dataset
+      kind: dataset
+      title: Geodata
+      icon: web/dataset.svg
+      preview: geodata-dataset-preview
+      states:
+        uploaded: Not loaded yet
+        loading: Loading
+        loaded: Loaded
+        published: Published
+        failed: Not loaded
+      actions:
+        - { id: publish, title: Publish as a service, element: geodata-dataset-publish }
+      i18n:
+        it:
+          title: Dato geografico
+          state.uploaded: Non ancora caricato
+          state.loading: In caricamento
+          state.loaded: Caricato
+          state.published: Pubblicato
+          state.failed: Non caricato
+          action.publish: Pubblica come servizio
   # The page of a link to a dataset (GP-336): its published layer, for people without an account.
   shared.view:
     - id: dataset
@@ -136,3 +174,8 @@ contributes:
       route: /app/geodata
       element: catalog-app
       icon: web/icon.svg
+libraries:
+  # Written by the build of the extension from its runtime dependencies (MK-131): do not edit.
+  - jar: 'lib/ext-catalog-api-1.0.0.jar'
+    coordinates: 'io.github.mosaikit.ext:ext-catalog-api:1.0.0'
+    sha256: 'f77a5b5ddc0219e34bad05a06226d7f02f443cba1f9ae1c36113785962565f0c'

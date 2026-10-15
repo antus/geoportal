@@ -30,6 +30,10 @@ import java.util.UUID;
 @ApplicationScoped
 public class UploadedDatasets {
 
+    /** GP-983: the state of a dataset made from a file of the catalog, recorded on the file. */
+    @jakarta.inject.Inject
+    CatalogStates states;
+
     public static final String EXTENSION = "dev.geoportal.ext.catalog.geodata";
     public static final String TYPE = "dataset";
     /** The storage of the organization, as Quotas names it. */
@@ -80,6 +84,29 @@ public class UploadedDatasets {
     /** @param layer the layer of a file with several, or {@code null} */
     public UploadedData upload(String fileName, String title, String description, InputStream content,
             long length, boolean sample, String crs, String layer) {
+        return create(fileName, title, description, content, length, sample, crs, layer, null);
+    }
+
+    /**
+     * GP-983: the dataset of a file of the catalog of mosaikit-ext, made when the catalog tells the kind
+     * of geodata files that it was stored (ADR-0028). The dataset is a resource whose parent is the file,
+     * so that the levels on the file and on its folders reach it; it keeps a copy of the content, which
+     * the loading reads as it reads an upload.
+     */
+    public UploadedData fromCatalog(UUID file, String fileName, InputStream content, long length) {
+        return create(fileName, null, "", content, length, false, null, null, file);
+    }
+
+    /** The reference of a file of the catalog of mosaikit-ext, the parent of its dataset. */
+    public static ResourceRef catalogFile(UUID file) {
+        return new ResourceRef(CATALOG, "file", file.toString());
+    }
+
+    /** The identifier of the file manager of mosaikit-ext (ext-catalog). */
+    public static final String CATALOG = "io.github.mosaikit.ext.catalog";
+
+    private UploadedData create(String fileName, String title, String description, InputStream content,
+            long length, boolean sample, String crs, String layer, UUID catalogFile) {
         String name = fileName(fileName);
         Format format = format(name);
         Integer declared = declared(crs);
@@ -89,7 +116,9 @@ public class UploadedDatasets {
         String readable = title == null || title.isBlank() ? titleOf(name) : title.strip();
         UploadedData data = new UploadedData(id, organization.require(), readable,
                 description == null ? "" : description.strip(), technicalName(name), sample, now);
-        resources.register(ref(id), Resources.Details.of(readable, link(id)));
+        resources.register(ref(id), new Resources.Details(readable, link(id),
+                catalogFile == null ? null : catalogFile(catalogFile)));
+        data.madeFrom(catalogFile);
         data.holds(store(id, 1, name, format, content), format, now);
         record("dataset.uploaded", data, Map.of());
         loading.load(data, declared, null, blank(layer));
@@ -102,11 +131,13 @@ public class UploadedDatasets {
         String before = data.title();
         String readable = title == null || title.isBlank() ? before : title.strip();
         data.describe(readable, description == null ? data.description() : description.strip(), Instant.now());
-        resources.update(ref(data.id()), Resources.Details.of(readable, link(data.id())));
+        resources.update(ref(data.id()), new Resources.Details(readable, link(data.id()),
+                data.catalogFile() == null ? null : catalogFile(data.catalogFile())));
         if (data.tableName() != null) {
             loading.layer(data); // the layer takes the new title
         }
         uploads.update(data);
+        states.mirror(data);
         record("dataset.renamed", data, Map.of("before", before));
         return data;
     }
@@ -125,6 +156,7 @@ public class UploadedDatasets {
         record("dataset.replaced", data, Map.of());
         loading.load(data, declared, previousCog, blank(layer));
         uploads.update(data);
+        states.mirror(data);
         return data;
     }
 
@@ -136,6 +168,7 @@ public class UploadedDatasets {
         Integer declared = declared(crs);
         loading.load(data, declared, data.cogFileId(), blank(layer));
         uploads.update(data);
+        states.mirror(data);
         return data;
     }
 
@@ -150,6 +183,7 @@ public class UploadedDatasets {
     public void advance(UploadedData data, boolean takeOver) {
         if (loading.advance(data, takeOver)) {
             uploads.update(data);
+            states.mirror(data);
         }
     }
 

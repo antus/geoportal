@@ -43,10 +43,10 @@ class RasterRulesTest {
     void theAreaOfARuleOnARasterClipsAndOnAVectorIntersects() throws Exception {
         Limits limits = new Limits(AREA, false, null, List.of(), Set.of());
         List<LayerAccess> access = List.of(
-                new LayerAccess("dem", List.of(new Reach(Kind.ORGANIZATION, ORG.toString(), "download")),
-                        List.of(new Limited("dario@example.test", "download", limits))),
-                new LayerAccess("parcels", List.of(new Reach(Kind.ORGANIZATION, ORG.toString(), "download")),
-                        List.of(new Limited("dario@example.test", "download", limits))));
+                new LayerAccess("dem", List.of(new Reach(Kind.ORGANIZATION, ORG.toString(), "read")),
+                        List.of(new Limited("dario@example.test", "read", limits))),
+                new LayerAccess("parcels", List.of(new Reach(Kind.ORGANIZATION, ORG.toString(), "read")),
+                        List.of(new Limited("dario@example.test", "read", limits))));
         List<GeoFenceRule> rules = AccessRules.clipRasters(RuleSet.of(WS, ORG, access),
                 List.of(layer("dem", true), layer("parcels", false)));
         GeoFenceRule dem = rules.stream().filter(r -> r.access() == GeoFenceRule.Access.LIMIT && "dem".equals(r.layer()))

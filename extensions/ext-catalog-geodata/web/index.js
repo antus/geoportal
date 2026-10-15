@@ -9,6 +9,7 @@
  * shared.js (GP-336).
  */
 
+import { defineKind } from './kind.js';
 import { definePublications } from './publications.js';
 import { defineServices } from './services.js';
 import { defineShared } from './shared.js';
@@ -92,6 +93,8 @@ const STYLE = `
 /** @type {import('@mosaikit/sdk').MosaikitExtension} */
 const extension = {
   activate(context) {
+    // GP-983: the preview and the action Publish of the geodata files of the catalog of mosaikit-ext.
+    defineKind(context);
     if (customElements.get('catalog-app')) {
       return;
     }

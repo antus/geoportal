@@ -207,7 +207,7 @@ test('GP-936 the sample datasets load in every format unless a setting turns the
   // Shared with the organization: every member sees and downloads them, nobody else edits them.
   const seen = await samples(owner());
   expect(seen.length).toBeGreaterThan(20);
-  expect(seen[0]?.level).toBe('download');
+  expect(seen[0]?.level).toBe('read');
   expect((await api(owner(), `${UPLOADS}/${seen[0]?.id ?? ''}/content`)).status).toBe(200);
 });
 

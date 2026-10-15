@@ -139,7 +139,7 @@ test.describe('GP-308 on GeoServer', () => {
     expect(published.status, JSON.stringify(published.body)).toBe(201);
     const grant = await api(owner(), `/api/v1/sharing/resources/${EXTENSION}/dataset/${dataset.id}/grants`, {
       method: 'PUT',
-      body: JSON.stringify({ subject: { kind: 'person', id: await accountOf(colleague()) }, level: 'download' }),
+      body: JSON.stringify({ subject: { kind: 'person', id: await accountOf(colleague()) }, level: 'read' }),
     });
     expect(grant.status).toBeLessThan(300);
     ws = ((await api(manager(), '/api/v1/ext/catalog-geodata/geoserver/alignment')).body as { workspace: string }).workspace;

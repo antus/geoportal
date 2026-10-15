@@ -36,7 +36,7 @@ class SurveyorRulesTest {
     void anAssignedSurveyorWritesTheirLayerOnlyAndAnEditorWritesNothing() {
         List<GeoFenceRule> rules = RuleSet.of(WS, ORG, List.of(
                 new LayerAccess("parcels", List.of(new Reach(Kind.PERSON, EDITOR, "manage"),
-                        new Reach(Kind.PERSON, SURVEYOR, "download")), List.of(), List.of(SURVEYOR)),
+                        new Reach(Kind.PERSON, SURVEYOR, "read")), List.of(), List.of(SURVEYOR)),
                 new LayerAccess("roads", List.of(new Reach(Kind.PERSON, SURVEYOR, "edit-data")), List.of(), List.of())));
         List<String> d = described(rules);
         assertEquals(List.of(
@@ -54,9 +54,9 @@ class SurveyorRulesTest {
     @Test
     void withoutSurveyorsTheSetIsTheOneOfTheSharingAlone() {
         List<LayerAccess> layers = List.of(new LayerAccess("parcels",
-                List.of(new Reach(Kind.ORGANIZATION, RuleSet.organizationRole(ORG), "download")), List.of()));
+                List.of(new Reach(Kind.ORGANIZATION, RuleSet.organizationRole(ORG), "read")), List.of()));
         List<LayerAccess> same = List.of(new LayerAccess("parcels",
-                List.of(new Reach(Kind.ORGANIZATION, RuleSet.organizationRole(ORG), "download")), List.of(), List.of()));
+                List.of(new Reach(Kind.ORGANIZATION, RuleSet.organizationRole(ORG), "read")), List.of(), List.of()));
         assertEquals(GeoFenceRule.canonical(RuleSet.of(WS, ORG, layers)), GeoFenceRule.canonical(RuleSet.of(WS, ORG, same)));
     }
 
@@ -76,8 +76,8 @@ class SurveyorRulesTest {
     void aSurveyorLimitedByDataRulesWritesWithinTheirAreaAndRowFilter() {
         String square = "SRID=32633;MULTIPOLYGON(((0 0,1 0,1 1,0 1,0 0)))";
         Limits limits = new Limits(square, false, "nome <> 'p1'", List.of("fid", "nome", "geom"), Set.of());
-        LayerAccess layer = new LayerAccess("parcels", List.of(new Reach(Kind.PERSON, SURVEYOR, "download")),
-                List.of(new Limited(SURVEYOR, "download", limits)), List.of(SURVEYOR, "other@example.test"));
+        LayerAccess layer = new LayerAccess("parcels", List.of(new Reach(Kind.PERSON, SURVEYOR, "read")),
+                List.of(new Limited(SURVEYOR, "read", limits)), List.of(SURVEYOR, "other@example.test"));
         assertEquals(List.of("other@example.test"), RuleSet.editing(layer));
         assertEquals(List.of(SURVEYOR), RuleSet.editingWithin(layer).stream().map(Limited::user).toList());
         List<GeoFenceRule> rules = RuleSet.of(WS, ORG, List.of(layer));
@@ -115,8 +115,8 @@ class SurveyorRulesTest {
         for (Limits stopping : List.of(new Limits(null, false, null, List.of("fid", "nome"), Set.of("nome")),
                 new Limits(null, true, null, List.of(), Set.of()))) {
             assertTrue(!RuleSet.writableWithin(stopping));
-            LayerAccess layer = new LayerAccess("parcels", List.of(new Reach(Kind.PERSON, SURVEYOR, "download")),
-                    List.of(new Limited(SURVEYOR, "download", stopping)), List.of(SURVEYOR));
+            LayerAccess layer = new LayerAccess("parcels", List.of(new Reach(Kind.PERSON, SURVEYOR, "read")),
+                    List.of(new Limited(SURVEYOR, "read", stopping)), List.of(SURVEYOR));
             assertEquals(List.of(), RuleSet.editingWithin(layer));
             List<String> rules = described(RuleSet.of(WS, ORG, List.of(layer)));
             assertTrue(rules.stream().noneMatch(r -> r.startsWith("ALLOW user " + SURVEYOR + " on parcels WFS TRANSACTION")),

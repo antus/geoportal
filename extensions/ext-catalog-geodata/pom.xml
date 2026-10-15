@@ -31,6 +31,14 @@
             <groupId>io.github.mosaikit</groupId>
             <artifactId>mosaikit-kernel-api</artifactId>
         </dependency>
+        <!-- GP-983: the contract file-kind of the catalog of mosaikit-ext (EXT-105, MK-134), brought as a
+             library of the extension (lib/, MK-131); installed into the local repository by
+             tools/mosaikit-ext.mjs, run below, until mosaikit-ext publishes it. -->
+        <dependency>
+            <groupId>io.github.mosaikit.ext</groupId>
+            <artifactId>ext-catalog-api</artifactId>
+            <version>1.0.0</version>
+        </dependency>
         <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-rest-jackson</artifactId>
@@ -95,6 +103,28 @@
 
     <build>
         <plugins>
+            <plugin>
+                <!-- GP-983: the extensions of mosaikit-ext of mosaikit-ext.json, and the API of their
+                     contracts in the local Maven repository, before this one compiles against them. -->
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>mosaikit-ext</id>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <executable>node</executable>
+                            <skip>false</skip>
+                            <arguments>
+                                <argument>${project.basedir}/../../tools/mosaikit-ext.mjs</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>

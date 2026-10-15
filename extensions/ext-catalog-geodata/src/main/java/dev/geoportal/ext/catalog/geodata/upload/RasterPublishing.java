@@ -34,6 +34,10 @@ import org.jboss.logging.Logger;
 @ApplicationScoped
 public class RasterPublishing {
 
+    /** GP-983: the state of a dataset made from a file of the catalog, recorded on the file. */
+    @jakarta.inject.Inject
+    CatalogStates states;
+
     private static final Logger LOG = Logger.getLogger(RasterPublishing.class);
 
     private final GeoServerGovernance geoserver;
@@ -109,6 +113,7 @@ public class RasterPublishing {
         geoserver.check(published);
         data.published(now);
         uploads.update(data);
+        states.mirror(data);
         record(existing.isPresent() ? "layer.republished" : "layer.published", layer, data, AuditLog.Outcome.SUCCEEDED,
                 Map.of("kind", "raster"));
         return DatasetPublishing.Outcome.done(published);
@@ -135,6 +140,7 @@ public class RasterPublishing {
         if (data != null && geoserver.published().stream().noneMatch(l -> data.id().equals(l.datasetId()))) {
             data.unpublished(Instant.now());
             uploads.update(data);
+            states.mirror(data);
         }
         record("layer.unpublished", name, data, AuditLog.Outcome.SUCCEEDED, Map.of("kind", "raster"));
         return DatasetPublishing.Outcome.done(layer);

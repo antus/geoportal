@@ -22,6 +22,10 @@ public interface UploadedDataRepository {
     @Find
     Optional<UploadedData> byId(UUID id);
 
+    /** The dataset made from a file of the catalog (GP-983). */
+    @Query("from UploadedData u where u.catalogFile = :file")
+    Optional<UploadedData> byCatalogFile(UUID file);
+
     @Query("select u.technicalName from UploadedData u where u.technicalName like :prefix")
     List<String> technicalNamesLike(String prefix);
 
