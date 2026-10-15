@@ -124,7 +124,7 @@ class OrganizationEventsTest {
         // The portable installation has no master key: the kernel refuses every read of a credential (#53).
         governance.failure = new SecretsUnavailableException("The store of credentials is disabled");
         events.handle(event(PlatformEvents.ORGANIZATION_CREATED, Map.of("slug", "acme")));
-        events.handle(event(PlatformEvents.EXTENSION_DISABLED, Map.of("extension", "dev.geoportal.catalog")));
+        events.handle(event(PlatformEvents.EXTENSION_DISABLED, Map.of("extension", "dev.geoportal.ext.catalog.geodata")));
         assertEquals(List.of("geoserver.aligned", "geoserver.withdrawn"),
                 audited.stream().map(AuditLog.Entry::action).toList());
         assertTrue(audited.stream().allMatch(e -> e.outcome() == AuditLog.Outcome.FAILED));
