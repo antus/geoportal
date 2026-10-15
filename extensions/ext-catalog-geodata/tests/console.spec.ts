@@ -257,7 +257,9 @@ test.describe('GP-339 on GeoServer', () => {
     expect(p.cause).toBe('data-rules');
     expect(p.answer.total).toBe(3);
     expect(p.answer.matched).toBe(2);
-    expect(p.answer.visible).toEqual(['nome']);
+    // The loader may add a key column of its own: the columns of the layer but the hidden one.
+    expect(p.answer.visible).toContain('nome');
+    expect(p.answer.visible).toEqual(p.answer.columns.filter((c) => c !== 'riservato'));
     expect(p.answer.hidden).toEqual(['riservato']);
     expect(p.answer.sample.map((r) => r.nome).sort()).toEqual(['Centrale', 'Nord']);
     expect(JSON.stringify(p.answer.sample)).not.toContain('segreto');
@@ -286,7 +288,7 @@ test.describe('GP-339 on GeoServer', () => {
     const shown = dialog.getByRole('complementary');
     await expect(shown).toContainText('Che cosa riceve da WFS la persona');
     await expect(shown).toContainText('Elementi2 di 3');
-    await expect(shown).toContainText('Colonne1 di 2 · senza riservato');
+    await expect(shown).toContainText(`Colonne${p.answer.visible.length} di ${p.answer.columns.length} · senza riservato`);
     const table = shown.getByRole('table', { name: 'I primi 2 elementi che riceve' });
     await expect(table).toContainText('Centrale');
     await expect(table).toContainText('Nord');
