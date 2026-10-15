@@ -165,6 +165,10 @@ test('GP-983 a GeoJSON stored in the file manager is a geodata file, with its st
   // The job of the catalog made the dataset of the file: its parent is the file, the owner of the file manages it.
   const d = await datasetOf(owner(), stored.id);
   expect(d).toMatchObject({ catalogFile: stored.id, format: 'geojson', level: 'manage' });
+  // EXT-107: no copy of the content under the geodata; the file counts once against the storage.
+  const own = await api(owner(), `/api/v1/files/${GEODATA}`);
+  expect(own.status).toBe(200);
+  expect(JSON.stringify(own.body)).not.toContain(`uploads/${d.id}/`);
   const all = (await api(owner(), UPLOADS)).body as Dataset[];
   expect(all.map((x) => x.id)).toContain(d.id);
   // Its state is on the file, as the catalog lists it.

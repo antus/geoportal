@@ -85,17 +85,61 @@ public class UploadedDatasets {
     /** @param layer the layer of a file with several, or {@code null} */
     public UploadedData upload(String fileName, String title, String description, InputStream content,
             long length, boolean sample, String crs, String layer) {
-        return create(fileName, title, description, content, length, sample, crs, layer, null);
+        String name = fileName(fileName);
+        Format format = format(name);
+        Integer declared = declared(crs);
+        fits(length);
+        UploadedData data = create(name, title, description, sample, null);
+        data.holds(store(data.id(), 1, name, format, content), format, Instant.now());
+        return created(data, declared, layer);
     }
 
     /**
      * GP-983: the dataset of a file of the catalog of mosaikit-ext, made when the catalog tells the kind
      * of geodata files that it was stored (ADR-0028). The dataset is a resource whose parent is the file,
-     * so that the levels on the file and on its folders reach it; it keeps a copy of the content, which
-     * the loading reads as it reads an upload.
+     * so that the levels on the file and on its folders reach it. Its content is the file, read through
+     * the catalog (EXT-107): the geodata keep no copy, and the storage counts the file once.
      */
-    public UploadedData fromCatalog(UUID file, String fileName, InputStream content, long length) {
-        return create(fileName, null, "", content, length, false, null, null, file);
+    public UploadedData fromCatalog(UUID file, String fileName, String contentType, long size) {
+        String name = fileName(fileName);
+        Format format = format(name);
+        UploadedData data = create(name, null, "", false, file);
+        data.follows(name, contentType, size, format, Instant.now());
+        return created(data, null, null);
+    }
+
+    /** GP-983: the file of the catalog of a dataset has a new content (or name): loaded again, still without a copy. */
+    public UploadedData followCatalog(UploadedData data, String fileName, String contentType, long size) {
+        String name = fileName(fileName);
+        Format format = format(name);
+        UUID previousCopy = data.fileId();
+        UUID previousCog = data.cogFileId();
+        data.follows(name, contentType, size, format, Instant.now());
+        if (previousCopy != null) {
+            files.delete(EXTENSION, previousCopy);
+        }
+        record("dataset.replaced", data, Map.of());
+        loading.load(data, null, previousCog, null);
+        uploads.update(data);
+        states.mirror(data);
+        return data;
+    }
+
+    /**
+     * GP-983: deletes the copy of the content that a dataset made from a file of the catalog kept before
+     * EXT-107, once the catalog has shown that it serves the file: never on a guess, so a catalog that is
+     * missing or misconfigured leaves the copy where it is. True when a copy was deleted.
+     */
+    public boolean dropCopy(UploadedData data, boolean catalogServesIt) {
+        if (data.catalogFile() == null || data.fileId() == null || !catalogServesIt) {
+            return false;
+        }
+        UUID copy = data.fileId();
+        data.copyDropped();
+        uploads.update(data);
+        files.delete(EXTENSION, copy);
+        record("dataset.copy-deleted", data, Map.of("file", copy.toString()));
+        return true;
     }
 
     /** The reference of a file of the catalog of mosaikit-ext, the parent of its dataset. */
@@ -106,12 +150,7 @@ public class UploadedDatasets {
     /** The identifier of the file manager of mosaikit-ext (ext-catalog). */
     public static final String CATALOG = "io.github.mosaikit.ext.catalog";
 
-    private UploadedData create(String fileName, String title, String description, InputStream content,
-            long length, boolean sample, String crs, String layer, UUID catalogFile) {
-        String name = fileName(fileName);
-        Format format = format(name);
-        Integer declared = declared(crs);
-        fits(length);
+    private UploadedData create(String name, String title, String description, boolean sample, UUID catalogFile) {
         UUID id = UUID.randomUUID();
         Instant now = Instant.now();
         String readable = title == null || title.isBlank() ? titleOf(name) : title.strip();
@@ -120,7 +159,10 @@ public class UploadedDatasets {
         resources.register(ref(id), new Resources.Details(readable, link(id),
                 catalogFile == null ? null : catalogFile(catalogFile)));
         data.madeFrom(catalogFile);
-        data.holds(store(id, 1, name, format, content), format, now);
+        return data;
+    }
+
+    private UploadedData created(UploadedData data, Integer declared, String layer) {
         record("dataset.uploaded", data, Map.of());
         loading.load(data, declared, null, blank(layer));
         uploads.insert(data);
@@ -200,7 +242,9 @@ public class UploadedDatasets {
     /** Deletes the dataset, its file and its registration with the grants it had. */
     public void delete(UploadedData data) {
         loading.unload(data);
-        files.delete(EXTENSION, data.fileId());
+        if (data.fileId() != null) {
+            files.delete(EXTENSION, data.fileId());
+        }
         resources.remove(ref(data.id()));
         uploads.delete(data);
         record("dataset.deleted", data, Map.of());

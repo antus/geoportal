@@ -44,11 +44,14 @@ file in the catalog and not its layer, or the reverse, and would ask people to s
   sharing dialog of a dataset adds only what is particular to geodata.
 - **The catalog owns the file.** The geodata answer `409` to replacing or deleting the content of a
   dataset made from a file, saying to do it in the catalog; the dataset follows the file.
-- **A copy for the loading, for now.** The dataset keeps a copy of the content in the file service under
-  the geodata, which the loading reads, in process or through a signed link for the loader sidecar
-  (ADR-0019), as for an upload: the catalog gives its kinds the content only as a stream. The copy
-  counts to the storage of the organization a second time. It goes when the catalog gives a kind a
-  signed link to the content of a file of its kind (a need of mosaikit-ext).
+- **No copy of the content.** A dataset made from a file reads the content through the catalog: a stream
+  in its jobs and in the requests of people who read the file, and for the loader sidecar (ADR-0019) a
+  signed link of the catalog (`CatalogFile.link`, EXT-107). The file counts once against the storage of
+  the organization; the geodata report to the quotas only what they derive from it (the table loaded
+  into PostGIS, the COG). The copies kept before EXT-107 (`uploaded_data.file_id` of such a dataset) are
+  deleted one by one when the catalog tells the kind `RECOGNIZED` after the update and the content of the
+  file is read through the catalog; a catalog that is missing or does not serve the file leaves the copy
+  where it is.
 - **Uploads to the geodata stay** until the app of the geodata becomes only the views of its layers and
   services: datasets uploaded there have no parent and are shared on their own, as before.
 - **Existing grants.** `upgrade/adopt-catalog.sql` renames the grants at `download` on datasets to `read`
@@ -60,9 +63,7 @@ file in the catalog and not its layer, or the reverse, and would ask people to s
 - A folder shared in the catalog shares the geodata in it, their layers included, without a second step.
 - A person with `read` on a file reads and downloads the features of its layer; `view` alone, for the
   layer only, is given on the dataset.
-- The geodata files of an installation without `ext-catalog-geodata` are plain files of the catalog, with
-  their content (EXT-105); that they show as files of an absent extension (MK-135) is for the catalog to
-  do (a need of mosaikit-ext).
-- The tables of a PostgreSQL connection offering the use "map" wait for the connector of PostgreSQL
-  (EXT-040), the facts found by inspection (EXT-018) and the uses that other extensions contribute to a
-  part of a connection (EXT-020).
+- The geodata files of an installation without `ext-catalog-geodata` keep their kind and state behind the
+  placeholder of an absent extension (MK-135), shown by the catalog (EXT-106), with their content; when the
+  extension comes back they are geodata again.
+- The tables of a PostgreSQL connection offering the use "map" are GP-986.

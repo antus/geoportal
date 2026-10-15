@@ -177,6 +177,6 @@ contributes:
       icon: web/icon.svg
 libraries:
   # Written by the build of the extension from its runtime dependencies (MK-131): do not edit.
-  - jar: 'lib/ext-catalog-api-1.0.0.jar'
-    coordinates: 'io.github.mosaikit.ext:ext-catalog-api:1.0.0'
-    sha256: 'f77a5b5ddc0219e34bad05a06226d7f02f443cba1f9ae1c36113785962565f0c'
+  - jar: 'lib/ext-catalog-api-1.1.0.jar'
+    coordinates: 'io.github.mosaikit.ext:ext-catalog-api:1.1.0'
+    sha256: 'b7c26e130afdbaffb932d8c772a2be2b09e6dc919ff340b71371d9f23e7e8c11'

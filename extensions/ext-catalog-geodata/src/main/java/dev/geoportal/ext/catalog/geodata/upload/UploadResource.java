@@ -80,6 +80,9 @@ public class UploadResource {
     private final AuditLog audit;
     private final AccessRules access;
     private final LayerEditing editing;
+    /** GP-983: the content of the datasets made from files of the catalog. */
+    @jakarta.inject.Inject
+    CatalogContent catalog;
 
     public UploadResource(UploadedDatasets datasets, UploadedDataRepository uploads, Samples samples,
             FileStorage files, Sharing sharing, Permissions permissions, AuditLog audit, AccessRules access,
@@ -262,12 +265,26 @@ public class UploadResource {
     public Response download(@PathParam("id") UUID id) {
         sharing.require(ref(id), "read");
         UploadedData data = find(id);
-        FileContent content = files.read(EXTENSION, data.fileId());
+        // GP-983: a dataset made from a file of the catalog is that file, read through the catalog (EXT-107).
+        java.io.InputStream stream;
+        AutoCloseable closing;
+        if (data.fileId() == null) {
+            stream = catalog.open(data);
+            closing = stream;
+        } else {
+            FileContent content = files.read(EXTENSION, data.fileId());
+            stream = content.stream();
+            closing = content;
+        }
         audit.record(EXTENSION, new AuditLog.Entry("dataset.downloaded", TYPE + "/" + id,
                 AuditLog.Outcome.SUCCEEDED, Map.of("title", data.title(), "version", data.version())));
         StreamingOutput body = output -> {
-            try (content) {
-                content.stream().transferTo(output);
+            try (closing) {
+                stream.transferTo(output);
+            } catch (java.io.IOException | RuntimeException e) {
+                throw e;
+            } catch (Exception e) {
+                throw new java.io.IOException(e);
             }
         };
         return Response.ok(body, data.contentType())
