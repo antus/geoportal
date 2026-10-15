@@ -23,13 +23,20 @@ here (ADR-0024).
 | `ext-catalog`, `ext-catalog-connection[-<source>]`, `ext-dashboards`, `ext-processes` | mosaikit-ext | files, connections, dashboards, processes |
 
 Names: folders and artifacts `ext-<extension>[-<sub>]`, manifest ids `dev.geoportal.ext.<extension>[.<sub>]`
-(`io.github.mosaikit.ext....` in mosaikit-ext). Until the code is split (no code has moved yet),
-`extensions/` keeps the four extensions of today: catalog, maps, dashboards, processes.
+(`io.github.mosaikit.ext....` in mosaikit-ext). The geodata of the catalog are `ext-catalog-geodata`
+(GP-983: API `catalog-geodata`, schema `ext_catalog_geodata`, app `/app/geodata`; it requires
+`ext-catalog` and `ext-catalog-connection`); maps, dashboards and processes are still the extensions of
+today. The extensions of mosaikit-ext come from the commit pinned in `mosaikit-ext.json`, built by
+`tools/mosaikit-ext.mjs` into `target/mosaikit-ext/packages` for the benches, `npm run dev` and the
+distributions, until they are published.
 
 ```
 pom.xml            aggregator: the extensions, the branding, the distributions
 package.json       npm run dev: Mosaikit with every extension and the Geoportal theme
-extensions/        catalog (Java backend, schema ext_catalog), maps, dashboards, processes;
+mosaikit-ext.json  the commit of mosaikit-ext whose extensions Geoportal composes
+tools/             mosaikit-ext.mjs builds those extensions from that commit (MOSAIKIT_EXT_SOURCE: a clone);
+                   its pom.xml is the first module of the aggregator
+extensions/        ext-catalog-geodata (Java backend, schema ext_catalog_geodata), maps, dashboards, processes;
                    each with docs/requirements/ for the requirements it implements alone
 branding/theme     name, logo and colors of Geoportal (theme extension dev.geoportal.theme)
 distribution/      installation, portable, server (Docker Compose), cloud (Helm)

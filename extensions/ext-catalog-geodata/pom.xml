@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SPDX-FileCopyrightText: 2026 Massimo Antonini
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>io.github.mosaikit</groupId>
+        <artifactId>mosaikit-extension-parent</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+        <relativePath/>
+    </parent>
+    <groupId>dev.geoportal</groupId>
+    <artifactId>ext-catalog-geodata</artifactId>
+    <version>2.0.0-SNAPSHOT</version>
+    <name>Geoportal Geodata</name>
+    <description>The geodata of the catalog: loading into PostGIS and COG, GeoServer and GeoFence, publishing, data rules, the data gateway and the proxy of OGC services.</description>
+    <properties>
+        <extension.package.name>ext-catalog-geodata</extension.package.name>
+        <!-- The tests against a real GeoServer in Docker (GP-334) run with -Pgeoserver. -->
+        <geoserver.tests.excluded>geoserver</geoserver.tests.excluded>
+        <!-- The tests of the loading against a real PostGIS in Docker (GP-937, GP-321, GP-324) run with
+             -Ppostgis; a profile names a tag no test has to let them run. -->
+        <postgis.tests.excluded>postgis</postgis.tests.excluded>
+    </properties>
+    <!-- Everything is provided by the kernel at runtime: the JAR in lib/ holds only these classes. -->
+    <dependencies>
+        <dependency>
+            <groupId>io.github.mosaikit</groupId>
+            <artifactId>mosaikit-kernel-api</artifactId>
+        </dependency>
+        <!-- GP-983: the contract file-kind of the catalog of mosaikit-ext (EXT-105, MK-134), brought as a
+             library of the extension (lib/, MK-131); installed into the local repository by
+             tools/mosaikit-ext.mjs (the first module of the aggregator, npm run dev, or by hand before
+             building this extension alone) until mosaikit-ext publishes it. -->
+        <dependency>
+            <groupId>io.github.mosaikit.ext</groupId>
+            <artifactId>ext-catalog-api</artifactId>
+            <version>1.0.0</version>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-rest-jackson</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-hibernate-orm</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-hibernate-validator</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-security</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>jakarta.data</groupId>
+            <artifactId>jakarta.data-api</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <!-- The driver of the kernel: the catalog creates the schema of each organization in the
+             geodata database and loads the uploaded data into it (GP-937). -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- GP-983: the adoption of the schema of the catalog (upgrade/adopt-catalog.sql) is tested with
+             the Flyway of the kernel on a PostgreSQL in Docker (tag postgis). -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-database-postgresql</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-simple</artifactId>
+            <version>2.0.16</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <excludedGroups>${geoserver.tests.excluded}, ${postgis.tests.excluded}</excludedGroups>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <profile>
+            <!-- mvn verify -Pgeoserver: also the tests that start PostGIS and the GeoServer of the
+                 server distribution in Docker (tag "geoserver"); a few minutes, Docker required. -->
+            <id>geoserver</id>
+            <properties>
+                <geoserver.tests.excluded>none</geoserver.tests.excluded>
+            </properties>
+        </profile>
+        <profile>
+            <!-- mvn verify -Ppostgis: also the tests that load the sample files into a PostGIS started in
+                 Docker (tag "postgis"); about a minute, Docker required. -->
+            <id>postgis</id>
+            <properties>
+                <postgis.tests.excluded>none</postgis.tests.excluded>
+            </properties>
+        </profile>
+    </profiles>
+</project>

@@ -61,7 +61,7 @@ values=$(mktemp)
 cat >"$values" <<'YAML'
 mosaikit:
   extensions:
-    dev.geoportal.catalog:
+    dev.geoportal.ext.catalog.geodata:
       settings:
         geoportal.catalog.loader.url: http://maps-loader:8090
         geoportal.catalog.loader.source-url: http://maps-mosaikit:80
@@ -85,7 +85,7 @@ loader:
   enabled: false
 mosaikit:
   extensions:
-    dev.geoportal.catalog:
+    dev.geoportal.ext.catalog.geodata:
       settings:
         geoportal.catalog.loader.url: ""
 YAML
@@ -104,7 +104,7 @@ values=$(mktemp)
 cat >"$values" <<'YAML'
 mosaikit:
   extensions:
-    dev.geoportal.catalog:
+    dev.geoportal.ext.catalog.geodata:
       settings:
         geoportal.catalog.loader.url: http://geoportal-loader:8090
         geoportal.catalog.loader.source-url: http://geoportal-mosaikit

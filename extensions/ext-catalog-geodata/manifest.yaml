@@ -1,0 +1,181 @@
+# SPDX-FileCopyrightText: 2026 Massimo Antonini
+id: dev.geoportal.ext.catalog.geodata
+version: 2.0.0-SNAPSHOT
+name: Geodata
+description: The geodata of the catalog of the organization, loaded into PostGIS and Cloud Optimized GeoTIFF and published through GeoServer, with data rules, the data gateway and the proxy of OGC services.
+kind: [app, service]
+platform: '>=0.1 <1'
+# GP-983, ADR-0024: the geospatial part of the catalog, composed with the file manager and the
+# connections of mosaikit-ext (MK-132: the kernel starts this extension only when both are present in
+# a version of the range). Its files are a kind of file of the catalog (EXT-105, ADR-0028).
+requires:
+  io.github.mosaikit.ext.catalog: '^0.1'
+  io.github.mosaikit.ext.catalog.connection: '^0.1'
+# GP-983: geodata files are a kind of file of the catalog (EXT-105), through its contract file-kind
+# (MK-134), whose interfaces come in the library ext-catalog-api (lib/, MK-131).
+contracts:
+  implements:
+    - contract: io.github.mosaikit.ext.catalog/file-kind
+      version: 1
+      api: io.github.mosaikit.ext:ext-catalog-api
+backend:
+  jar: lib/ext-catalog-geodata.jar
+  # Not "catalog": that API is the file manager of mosaikit-ext.
+  api: catalog-geodata
+database:
+  # Not ext_catalog, the schema of the file manager of mosaikit-ext. Installations that had the catalog
+  # of Geoportal in ext_catalog adopt it with upgrade/adopt-catalog.sql (README, Upgrading).
+  schema: ext_catalog_geodata
+frontend:
+  entry: web/index.js
+  isolation: module
+  # What the frontend may do when the shell runs it isolated in an iframe.
+  bridge:
+    publishes: [catalog.*, shell.share]
+    services: [api]
+# Tools for assistants and MCP clients.
+actions:
+  - name: list-datasets
+    title: List datasets
+    description: Lists the datasets of the catalog of the organization, with their theme, format and access.
+    risk: read
+    call: { method: GET, path: datasets }
+  - name: list-uploaded-data
+    title: List uploaded data
+    description: Lists the datasets uploaded to the catalog that the person sees, with title, technical name, format, state and level.
+    risk: read
+    call: { method: GET, path: uploads }
+# What a person may do in the catalog; off until the administrators grant them, who hold them all.
+permissions:
+  - name: upload-data
+    title: Upload data
+    description: Upload files of geographic data to the catalog of the organization.
+    i18n:
+      it: { title: Caricare dati, description: Caricare file di dati geografici nel catalogo dell'organizzazione. }
+  # GP-114, GP-118: publish a loaded dataset as a GeoServer service, republish, repoint and unpublish
+  # it; the level manage on the dataset is needed too.
+  - name: publish
+    title: Publish data as services
+    description: Publish loaded datasets as layers of the GeoServer workspace of the organization, and republish, repoint or unpublish them.
+    i18n:
+      it:
+        title: Pubblicare dati come servizi
+        description: Pubblicare i dati caricati come livelli del workspace GeoServer dell'organizzazione, e ripubblicarli, ripuntarli o ritirarli.
+  # GP-334: the GeoServer workspace of the organization; the administrators hold it.
+  - name: manage-geoserver
+    title: Manage the GeoServer publication
+    description: Publish and withdraw layers and styles in the GeoServer workspace of the organization, and align GeoServer with the catalog.
+    i18n:
+      it:
+        title: Gestire la pubblicazione su GeoServer
+        description: Pubblicare e ritirare livelli e stili nel workspace GeoServer dell'organizzazione, e allineare GeoServer al catalogo.
+  # GP-939: external services of other servers, reached directly or through the proxy.
+  - name: register-service
+    title: Register external services
+    description: Register OGC services of other servers in the catalog, to use them in maps directly or through the proxy.
+    i18n:
+      it:
+        title: Registrare servizi esterni
+        description: Registrare nel catalogo servizi OGC di altri server, da usare nelle mappe direttamente o attraverso il proxy.
+  # GP-939: credentials of the organization sent by the proxy to a registered service.
+  - name: service-credentials
+    title: Send credentials to external services
+    description: Have the proxy send a credential of the organization to a registered service, or move such a service to another address.
+    i18n:
+      it:
+        title: Inviare credenziali ai servizi esterni
+        description: Far inviare dal proxy una credenziale dell'organizzazione a un servizio registrato, o spostare un servizio che ne ha una a un altro indirizzo.
+  # GP-036: write the data of the published layers assigned to the person (WFS-T through the catalog and
+  # GeoServer). The surveyor profile of an organization holds it; the editor profile does not.
+  - name: edit-layer-data
+    title: Edit the data of assigned layers
+    description: Insert, change and delete the features of the published layers assigned to the person, through the catalog and through WFS-T of GeoServer.
+    i18n:
+      it:
+        title: Modificare i dati dei livelli assegnati
+        description: Inserire, modificare ed eliminare gli oggetti dei livelli pubblicati assegnati alla persona, attraverso il catalogo e il WFS-T di GeoServer.
+# The resources of the catalog, shared with the dialog of Mosaikit (GP-936).
+resources:
+  - type: dataset
+    title: Dataset
+    i18n:
+      it: { title: Dato }
+    levels:
+      # The published layer only: its map and tiles, not its features nor its file.
+      - { name: view, title: View, i18n: { it: { title: Vedere } } }
+      # The features and the file too: named as the level read of the files of the catalog, which
+      # reaches a dataset made from a file (ADR-0028); it was download until GP-983.
+      - { name: read, title: Read and download, i18n: { it: { title: Leggere e scaricare } } }
+      - { name: edit, title: Edit, edits: true, i18n: { it: { title: Modificare } } }
+      - { name: edit-data, title: Edit the data, edits: true, i18n: { it: { title: Modificare i dati } } }
+      - { name: manage, title: Manage, edits: true, i18n: { it: { title: Gestire } } }
+    # GP-336: a link opens the published layer of the dataset, to view only, also without an account.
+    subjects: [person, group, organization, link]
+    linkLevel: view
+    # GP-983, ADR-0028: a dataset made from a file of the catalog has that file as its parent, and the
+    # levels read, edit and manage on the file, or on a folder above it, reach the dataset (MK-136).
+    inherits: parent
+  - type: service
+    title: External service
+    i18n: { it: { title: Servizio esterno } }
+    levels:
+      - { name: view, title: View, i18n: { it: { title: Vedere } } }
+      - { name: use, title: Use, i18n: { it: { title: Usare } } }
+      - { name: manage, title: Manage, edits: true, i18n: { it: { title: Gestire } } }
+    subjects: [person, group, organization]
+# GP-336: what the organization reads of its published geodata, through the gateway and the gate of
+# the catalog; platform administrators set a monthly limit, beyond which the requests are refused.
+measures:
+  - id: data-requests
+    label: Requests to the geodata
+    unit: requests
+    kind: counter
+    i18n:
+      it: { label: Richieste ai dati geografici }
+contributes:
+  # GP-983: the geodata files of the catalog (EXT-105), with their geospatial preview, the states of
+  # their loading and the action Publish.
+  catalog.file-kind:
+    - id: dataset
+      kind: dataset
+      title: Geodata
+      icon: web/dataset.svg
+      preview: geodata-dataset-preview
+      states:
+        uploaded: Not loaded yet
+        loading: Loading
+        loaded: Loaded
+        published: Published
+        failed: Not loaded
+      actions:
+        - { id: publish, title: Publish as a service, element: geodata-dataset-publish }
+      i18n:
+        it:
+          title: Dato geografico
+          state.uploaded: Non ancora caricato
+          state.loading: In caricamento
+          state.loaded: Caricato
+          state.published: Pubblicato
+          state.failed: Non caricato
+          action.publish: Pubblica come servizio
+  # The page of a link to a dataset (GP-336): its published layer, for people without an account.
+  shared.view:
+    - id: dataset
+      type: dataset
+      element: catalog-shared-dataset
+  # The app bar of the shell.
+  rail.app:
+    # Not /app/catalog, the file manager of mosaikit-ext, which the geodata join with MK-134 (GP-983).
+    - id: geodata
+      title: Geodata
+      # The name in the language of the person (MK-053 of Mosaikit).
+      i18n:
+        it: { title: Dati geografici }
+      route: /app/geodata
+      element: catalog-app
+      icon: web/icon.svg
+libraries:
+  # Written by the build of the extension from its runtime dependencies (MK-131): do not edit.
+  - jar: 'lib/ext-catalog-api-1.0.0.jar'
+    coordinates: 'io.github.mosaikit.ext:ext-catalog-api:1.0.0'
+    sha256: 'f77a5b5ddc0219e34bad05a06226d7f02f443cba1f9ae1c36113785962565f0c'

@@ -5,7 +5,9 @@ containers. For Docker use `geoportal-server`, for Kubernetes `geoportal-cloud`;
 without installing anything use the portable archive.
 
 Geoportal is [Mosaikit](https://github.com/mosaikit/mosaikit) with the extensions of Geoportal
-(Catalog, Maps, Dashboards, Processes) and its theme, all in `extensions/`.
+(Geodata, Maps, Dashboards, Processes), the extensions of
+[mosaikit-ext](https://github.com/mosaikit/mosaikit-ext) they build on (the file manager Catalog and
+Connections) and its theme, all in `extensions/`.
 
 ## Start
 
@@ -24,6 +26,24 @@ Geoportal is [Mosaikit](https://github.com/mosaikit/mosaikit) with the extension
 
 Stop with Ctrl+C. The launcher uses the Java of `JAVA_HOME`, or `java` on the path.
 
+## Upgrading an installation that had the catalog of Geoportal
+
+Until October 2026 the geodata were the extension `dev.geoportal.catalog`, with the schema `ext_catalog`
+in the database. They are now `dev.geoportal.ext.catalog.geodata`, with the schema `ext_catalog_geodata`,
+and `ext_catalog` belongs to the file manager of mosaikit-ext (GP-983). Before the first start with the
+new extensions, with Geoportal stopped and after a backup of the database, run once as the owner of the
+database:
+
+```bash
+psql -v ON_ERROR_STOP=1 -h localhost -U mosaikit -d mosaikit -f upgrade/adopt-catalog.sql
+```
+
+It renames the schema and gives the rows of the kernel that named the catalog (grants, permissions,
+credentials, files, quotas, the API `catalog` of service identities) to the new extension; it deletes
+nothing, changes nothing on a new installation, and can be run again. Then change by hand the settings
+that name the old extension, such as `mosaikit.quotas.limits."dev.geoportal.catalog/data-requests"` in
+`config/application.properties`. The settings `geoportal.catalog.*` keep their names.
+
 ## Upload size
 
 Files up to 1 GB are accepted, as in the other distributions of Geoportal: `config/application.properties`
@@ -39,5 +59,6 @@ a larger one with `413`. A proxy in front of Geoportal must accept bodies as lar
 |---|---|
 | `mosaikit`, `mosaikit.cmd` | the launcher |
 | `config/` | settings; `config/trusted-keys` holds the key that signed the extensions |
-| `extensions/` | the extensions of Geoportal, signed |
+| `extensions/` | the extensions of Geoportal and of mosaikit-ext, signed |
+| `upgrade/adopt-catalog.sql` | the adoption of the data of the old catalog (above) |
 | `bin/kernel/` | the kernel of Mosaikit, with the web interface |

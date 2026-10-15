@@ -51,7 +51,7 @@ chart of Mosaikit passes to the kernel as environment variables (MK-129, `extens
 ```yaml
 mosaikit:
   extensions:
-    dev.geoportal.catalog:
+    dev.geoportal.ext.catalog.geodata:
       settings:
         geoportal.catalog.loader.url: http://<release>-loader:8090
         geoportal.catalog.loader.source-url: http://<release>-mosaikit
@@ -74,7 +74,7 @@ Cilium); without them anything in the cluster could name any person to GeoServer
 
 ```bash
 kubectl create secret generic geoportal-published-views --from-literal=username=geoserver_reader --from-literal=password='<password>'
-# after creating the service identity "gateway" in Geoportal (API catalog, endpoint check-key):
+# after creating the service identity "gateway" in Geoportal (API catalog-geodata, endpoint check-key):
 kubectl create secret generic geoportal-gateway-key --from-literal=key='mks_...'
 helm upgrade geoportal ./geoportal --reuse-values --set gateway.serviceKeySecret=geoportal-gateway-key
 ```
@@ -83,7 +83,7 @@ The kernel needs `mosaikit.database.published-views.login`/`.password` (the same
 `geoportal.gateway.enabled=true` and `geoportal.geoserver.url=http://<release>-gateway:8480/geoserver`;
 set them in the values (MK-129, see *Settings of the extensions* below): the first two in
 `mosaikit.kernel.extraSettings`, the password as a reference to the Secret `geoportal-published-views`,
-the other two in `mosaikit.extensions.dev.geoportal.catalog.settings`.
+the other two in `mosaikit.extensions.dev.geoportal.ext.catalog.geodata.settings`.
 
 ## Upload size
 
@@ -110,7 +110,7 @@ extension (`mosaikit.extensions.<id>.settings`), and those of the kernel in
 ```yaml
 mosaikit:
   extensions:
-    dev.geoportal.catalog:
+    dev.geoportal.ext.catalog.geodata:
       settings:
         geoportal.gateway.enabled: "true"
         geoportal.geoserver.url: http://geoportal-gateway:8480/geoserver
@@ -126,3 +126,13 @@ mosaikit:
 and on the loader turned off, secret settings by reference; and the upload size (issue #40), the same
 for the kernel and the gateway. The CI runs it on the assembled chart,
 `target/dist/geoportal-cloud/geoportal`.
+
+## Upgrading a release that had the catalog of Geoportal
+
+Until October 2026 the geodata were the extension `dev.geoportal.catalog`, with the schema `ext_catalog`;
+they are now `dev.geoportal.ext.catalog.geodata`, with `ext_catalog_geodata`, and `ext_catalog` is the
+file manager of mosaikit-ext (GP-983). Before `helm upgrade` to such a version, with the release scaled
+to zero and after a backup, run `upgrade/adopt-catalog.sql` of the installation archive once against the
+database of Geoportal, as its owner (`psql -v ON_ERROR_STOP=1 -f adopt-catalog.sql`), and move the
+values of `mosaikit.extensions.dev.geoportal.catalog` to `mosaikit.extensions.dev.geoportal.ext.catalog.geodata`.
+The script renames and never deletes; see the README of the installation.

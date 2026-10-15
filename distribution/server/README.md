@@ -27,7 +27,7 @@ stay in use across builds; `docker compose up -d --build` then brings the new im
 
 | Database | User | Content |
 |---|---|---|
-| `mosaikit` | `mosaikit` | Geoportal: organizations, people, and a schema per extension (`ext_catalog`, …) |
+| `mosaikit` | `mosaikit` | Geoportal: organizations, people, and a schema per extension (`ext_catalog`, `ext_catalog_geodata`, …) |
 | `keycloak` | `keycloak` | Keycloak |
 | `geoserver` | `geoserver` | the GeoFence rules (schema `geofence`) |
 | `geodata` | `geoserver` | the data of Geoportal, with PostGIS and PostGIS raster: a schema per organization, `org_<identifier>`, where the catalog loads uploaded vectors (GP-937), the store `data` of its workspace; GDAL may read GeoTIFF and write COG there (`postgis.gdal_enabled_drivers`) |
@@ -45,7 +45,7 @@ README of the catalog extension); do not change them by hand, the next alignment
 
 The catalog reads three credentials. `geoserver` with `gsadmin:<GEOSERVER_ADMIN_PASSWORD>` and
 `geodata` with `geoserver:<GEOSERVER_DB_PASSWORD>` are stored once by a platform administrator in the
-**Installation credentials** of Mosaikit, meant for the extension `dev.geoportal.catalog` (an
+**Installation credentials** of Mosaikit, meant for the extension `dev.geoportal.ext.catalog.geodata` (an
 organization that stores one with the same name in Administration, Credentials uses its own); with them
 in place, the workspace of each organization is made a few seconds after the organization is created.
 `published-views`, stored by the administrators of each organization, with `<user>:<password>` of a login of the
@@ -59,6 +59,13 @@ the first start, and keep it.
 An installation created before the gateway: add `GEOPORTAL_MASTER_KEY` and `GEOSERVER_READER_PASSWORD`
 to `.env` (see `env.example`), and recreate the volume `loader-work` (`docker compose down`, `docker volume
 rm geoportal-server_loader-work`), which earlier images created owned by root.
+
+An installation that had the catalog of Geoportal (`dev.geoportal.catalog`, schema `ext_catalog`) keeps
+its data: the one-shot service `adopt-catalog` runs `postgres/adopt-catalog.sql` before Geoportal starts,
+which renames the schema to `ext_catalog_geodata` and gives the rows of the kernel that named the catalog
+to `dev.geoportal.ext.catalog.geodata` (GP-983); it deletes nothing and changes nothing on a new or
+already adopted installation. The service identity `gateway` gets the API `catalog-geodata` in place of
+`catalog`. A backup of the volume `postgres-data` before the first start is still wise.
 
 An installation created before October 2026 has the administrator `admin` in its GeoServer volume and
 a workspace `geoportal` that nothing uses any more: change the administrator in the security pages of
@@ -97,7 +104,7 @@ QGIS (or any desktop client) reaches the same addresses with a personal access k
 session:
 
 1. Once per installation, a platform administrator creates the service identity of the gateway: in the
-   shell, **Service identities**, **New**: name `gateway`, API `catalog`, endpoint `check-key`. Copy its
+   shell, **Service identities**, **New**: name `gateway`, API `catalog-geodata`, endpoint `check-key`. Copy its
    key (`mks_...`, shown once) into `.env` as `GATEWAY_SERVICE_KEY`, then `docker compose up -d gateway`.
    The key is a secret: it stays in `.env`, never in a repository.
 2. Each person creates a personal access key in their settings (**Access keys**), for the organization

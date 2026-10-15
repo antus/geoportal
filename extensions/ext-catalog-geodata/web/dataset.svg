@@ -1,0 +1,8 @@
+<!-- SPDX-FileCopyrightText: 2026 Massimo Antonini -->
+<!-- GP-983: the icon of a geodata file in the catalog: a map pin on a tile of the brand color. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <rect width="24" height="24" rx="6" fill="#2f7d4f"/>
+  <g fill="none" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 19s-5-4.6-5-8.5a5 5 0 0 1 10 0C17 14.4 12 19 12 19z"/><circle cx="12" cy="10.5" r="1.8"/>
+  </g>
+</svg>

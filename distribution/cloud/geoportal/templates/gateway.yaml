@@ -44,7 +44,7 @@ spec:
             - name: GATEWAY_MAX_BODY
               value: {{ .Values.gateway.maxBody | default .Values.mosaikit.files.maxSize | quote }}
             {{- if .Values.gateway.serviceKeySecret }}
-            # The key of the service identity "gateway" of Geoportal (API catalog, endpoint check-key).
+            # The key of the service identity "gateway" of Geoportal (API catalog-geodata, endpoint check-key).
             - name: GATEWAY_SERVICE_KEY
               valueFrom:
                 secretKeyRef:

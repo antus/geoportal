@@ -1,0 +1,12 @@
+# SPDX-FileCopyrightText: 2026 Massimo Antonini
+#
+# GP-336: what the test of the data gateway (gateway.e2e.ts) changes in the server stack, over its
+# compose.yaml: people register without a mail server. For the tests only.
+#
+#   cd target/dist/geoportal-server
+#   docker compose -p geoportal-f04-gp336 -f compose.yaml \
+#     -f ../../../extensions/ext-catalog-geodata/tests/gateway/compose.test.yaml up -d --build
+services:
+  geoportal:
+    environment:
+      MOSAIKIT_ACCOUNTS_CONFIRM_EMAIL: 'false'
