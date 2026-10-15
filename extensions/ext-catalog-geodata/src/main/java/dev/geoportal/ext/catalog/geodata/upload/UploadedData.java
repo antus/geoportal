@@ -51,7 +51,8 @@ public class UploadedData {
     @Column(nullable = false, length = 20)
     private String format;
 
-    @Column(name = "file_id", nullable = false)
+    /** The copy of the content in the file service; null for a dataset made from a file of the catalog (GP-983). */
+    @Column(name = "file_id")
     private UUID fileId;
 
     @Column(name = "file_name", nullable = false, length = 255)
@@ -182,6 +183,28 @@ public class UploadedData {
         this.layers = null;
         waiting(null, null, now);
         forget();
+    }
+
+    /**
+     * GP-983, EXT-107: the content is now that of the file of the catalog the dataset is made from, read
+     * through the catalog, without a copy here: a new version, to be loaded again.
+     */
+    void follows(String name, String type, long bytes, Format format, Instant now) {
+        this.fileId = null;
+        this.fileName = name;
+        this.contentType = type;
+        this.size = bytes;
+        this.format = format.id();
+        this.version++;
+        this.layer = null;
+        this.layers = null;
+        waiting(null, null, now);
+        forget();
+    }
+
+    /** GP-983: the copy of the content kept before EXT-107 is gone; the catalog serves the content. */
+    void copyDropped() {
+        this.fileId = null;
     }
 
     /** Not loaded yet: just stored, or waiting for the geodata database (with the code and reason). */

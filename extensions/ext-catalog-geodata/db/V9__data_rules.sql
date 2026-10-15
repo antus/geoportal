@@ -1,5 +1,4 @@
 -- SPDX-FileCopyrightText: 2026 Massimo Antonini
--- SPDX-License-Identifier: AGPL-3.0-or-later
 --
 -- GP-308: data rules. A rule limits what a subject (a person or a team) sees of a dataset: an area in
 -- the reference system of its data, a CQL filter of the rows, hidden columns. Rules that apply to the

@@ -89,6 +89,10 @@ public class DatasetLoading {
         this.entities = entities;
     }
 
+    /** GP-983: the content of the datasets made from files of the catalog. */
+    @jakarta.inject.Inject
+    CatalogContent catalog;
+
     private static final ObjectMapper JSON = new ObjectMapper();
     /** How long the signed link to the upload works for the loader. */
     private static final Duration LINK = Duration.ofHours(2);
@@ -177,7 +181,9 @@ public class DatasetLoading {
                 target = geodata.loaderTarget(schema, table).orElseThrow(() -> new Geodata.Unavailable(
                         "The organization has no credential " + Geodata.CREDENTIAL + ".", null));
             }
-            String source = Geodata.loaderSource() + files.link(EXTENSION, data.fileId(), LINK).path();
+            // GP-983, EXT-107: the file of the catalog through a link of the catalog, never a copy.
+            String source = Geodata.loaderSource() + (data.fileId() == null ? catalog.link(data, LINK)
+                    : files.link(EXTENSION, data.fileId(), LINK).path());
             String job = loader.submit(new LoaderClient.Job(source, data.fileName(), format.id(), declared,
                     Loader.formatCrs(format, firstLine(data)), layer, target));
             if (target != null) {
@@ -323,8 +329,8 @@ public class DatasetLoading {
         if (!"csv".equals(data.format())) {
             return null;
         }
-        try (FileContent content = files.read(EXTENSION, data.fileId())) {
-            byte[] head = content.stream().readNBytes(65536);
+        try (InputStream content = stream(data)) {
+            byte[] head = content.readNBytes(65536);
             String text = new String(head, StandardCharsets.UTF_8).replace("\uFEFF", "");
             int end = text.indexOf('\n');
             return (end < 0 ? text : text.substring(0, end)).replace("\r", "");
@@ -402,11 +408,25 @@ public class DatasetLoading {
     }
 
     private byte[] content(UploadedData data) {
-        try (FileContent content = files.read(EXTENSION, data.fileId())) {
-            return content.stream().readAllBytes();
+        try (InputStream content = stream(data)) {
+            return content.readAllBytes();
         } catch (IOException e) {
             throw new UncheckedIOException("The file of the dataset cannot be read", e);
         }
+    }
+
+    /** The content of a dataset: its own file, or the file of the catalog it is made from (GP-983). */
+    private InputStream stream(UploadedData data) {
+        if (data.fileId() == null) {
+            return catalog.open(data);
+        }
+        FileContent content = files.read(EXTENSION, data.fileId());
+        return new java.io.FilterInputStream(content.stream()) {
+            @Override
+            public void close() throws IOException {
+                content.close();
+            }
+        };
     }
 
     private UUID storeCog(UploadedData data, byte[] cog) {

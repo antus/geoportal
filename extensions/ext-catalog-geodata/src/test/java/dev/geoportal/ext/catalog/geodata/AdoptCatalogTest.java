@@ -14,6 +14,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.Duration;
+import java.util.List;
 import java.util.UUID;
 import org.flywaydb.core.Flyway;
 import org.flywaydb.core.api.output.MigrateResult;
@@ -133,9 +134,19 @@ class AdoptCatalogTest {
         assertFalse(exists("select 1 from pg_namespace where nspname = 'ext_catalog'"), "ext_catalog is free");
         assertEquals("7", value("select loaded from ext_catalog_geodata.sample_load where organization_id = '" + ORG + "'"));
         MigrateResult again = migrate("ext_catalog_geodata", null);
-        assertEquals(1, again.migrationsExecuted,
-                "the migrations of the catalog are those of ext-catalog-geodata, which adds only its own (V12)");
-        assertEquals("12", value("select max(version::int) from ext_catalog_geodata.flyway_schema_history"
+        // Those of the catalog are applied: only the migrations after V11, of ext-catalog-geodata, run.
+        long own;
+        int last;
+        try (var names = Files.list(Path.of("db"))) {
+            List<Integer> versions = names.map(p -> p.getFileName().toString())
+                    .filter(n -> n.matches("V\\d+__.*\\.sql"))
+                    .map(n -> Integer.parseInt(n.substring(1, n.indexOf("__")))).toList();
+            own = versions.stream().filter(v -> v > 11).count();
+            last = versions.stream().mapToInt(Integer::intValue).max().orElseThrow();
+        }
+        assertEquals(own, again.migrationsExecuted,
+                "the migrations of the catalog are those of ext-catalog-geodata, which adds only its own");
+        assertEquals(String.valueOf(last), value("select max(version::int) from ext_catalog_geodata.flyway_schema_history"
                 + " where version is not null and success"));
 
         assertEquals("2", value("select count(*) from mk_kernel.resource where extension_id = '" + NEW + "'"));

@@ -32,10 +32,10 @@ other packages. To follow mosaikit-ext, change the commit of `mosaikit-ext.json`
 manifest when a version leaves them).
 
 A file of a geodata format stored in the file manager is a dataset of the geodata, with its state,
-its geospatial preview and the action Publish (below, *Geodata files of the catalog*). A PostGIS table
-as a part of a PostgreSQL connection offering the use "map" waits for the connector of PostgreSQL
-(EXT-040) and the uses that other extensions contribute to a part of a connection (EXT-018, EXT-020);
-the external OGC services become the connector `ext-catalog-connection-ogc` (GP-957) on EXT-010.
+its geospatial preview and the action Publish (below, *Geodata files of the catalog*). Without this
+extension the catalog keeps the kind and state of those files behind the placeholder of an absent
+extension (MK-135, EXT-106). A PostGIS table as a part of a PostgreSQL connection offering the use "map"
+is GP-986; the external OGC services become the connector `ext-catalog-connection-ogc` (GP-957).
 
 ## Geodata files of the catalog
 
@@ -51,8 +51,12 @@ The geodata are a kind of file of the catalog of mosaikit-ext (GP-983,
   TIFF by its signature. Other files stay plain files.
 - **A dataset** (`uploaded_data.catalog_file`), made in a job of the organization a few seconds after the
   file is stored, owned by the organization and loaded as an upload is; replaced, it is loaded again;
-  deleted, its table, its COG and its layers go with it; renamed or moved, it stays as it is. It keeps a
-  copy of the content for the loading, which counts to the storage a second time (ADR-0028).
+  deleted, its table, its COG and its layers go with it; renamed or moved, it stays as it is. It keeps no
+  copy of the content (`file_id` is null): the loading reads the file through the catalog, and the loader
+  sidecar through a signed link of the catalog (`CatalogFile.link`, EXT-107), so the file counts once
+  against the storage and the geodata report only the table and the COG they derive from it. A copy kept
+  before (until GP-983 was closed) is deleted when the catalog tells the kind `RECOGNIZED` after the
+  update and serves the content; otherwise it stays.
 - **Its state on the file**, which the catalog shows: `uploaded` (*Non ancora caricato*, with why),
   `loading`, `loaded` (with the features and the reference system), `published`, `failed` (with why);
   recorded at every change, also when the loader sidecar ends or a layer is published or withdrawn.
@@ -108,7 +112,7 @@ name the extension, such as `mosaikit.quotas.limits."dev.geoportal.catalog/data-
 | `db/` | Flyway migrations of the schema `ext_catalog_geodata`, run by the kernel at start; never edit an applied one (their checksums carry the data of the old catalog over, see Upgrading) |
 | `upgrade/adopt-catalog.sql` | The adoption of the data of the old catalog `dev.geoportal.catalog`, and the level download renamed read (GP-983) |
 | `upload/GeodataFileKind.java`, `upload/CatalogStates.java`, `web/kind.js` | The geodata files of the catalog of mosaikit-ext (GP-983, ADR-0028) |
-| `tests/catalog-files.spec.ts` | The tests of the geodata files of the catalog (GP-983) |
+| `tests/catalog-files.spec.ts`, `tests/without-geodata.spec.ts` | The tests of the geodata files of the catalog, and of an installation without this extension (GP-983) |
 | `tests/composition.ts`, `tests/composition.spec.ts` | The extensions of mosaikit-ext of the bench, and the tests of the composition (GP-983) |
 
 ## Build and test

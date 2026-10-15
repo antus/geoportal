@@ -1,5 +1,4 @@
 -- SPDX-FileCopyrightText: 2026 Massimo Antonini
--- SPDX-License-Identifier: AGPL-3.0-or-later
 --
 -- External services registered in the catalog (GP-939): an OGC service of another server, reached
 -- from the browser directly or through the proxy of the catalog. Each belongs to an organization,

@@ -27,3 +27,26 @@ path = [
 ]
 SPDX-FileCopyrightText = "2026 Massimo Antonini"
 SPDX-License-Identifier = "CC0-1.0"
+
+# The migrations of ext-catalog-geodata applied before the licence (V1 to V12): Flyway keeps a checksum
+# of each file, comments included, and refuses to start when an applied one changes, so they keep the
+# bytes they were applied with (ADR-0027) and get their licence here, together with their copyright
+# line. Every later migration carries both lines in the file.
+[[annotations]]
+path = [
+  "extensions/ext-catalog-geodata/db/V1__create_dataset.sql",
+  "extensions/ext-catalog-geodata/db/V2__uploaded_data.sql",
+  "extensions/ext-catalog-geodata/db/V3__geoserver_publication.sql",
+  "extensions/ext-catalog-geodata/db/V4__create_external_service.sql",
+  "extensions/ext-catalog-geodata/db/V5__loading.sql",
+  "extensions/ext-catalog-geodata/db/V6__loader.sql",
+  "extensions/ext-catalog-geodata/db/V7__publishing.sql",
+  "extensions/ext-catalog-geodata/db/V8__geofence_rules.sql",
+  "extensions/ext-catalog-geodata/db/V9__data_rules.sql",
+  "extensions/ext-catalog-geodata/db/V10__layer_assignments.sql",
+  "extensions/ext-catalog-geodata/db/V11__rasters_and_service_rules.sql",
+  "extensions/ext-catalog-geodata/db/V12__catalog_files.sql",
+]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 Massimo Antonini"
+SPDX-License-Identifier = "AGPL-3.0-or-later"

@@ -14,7 +14,6 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 import java.util.Optional;
@@ -23,8 +22,8 @@ import org.jboss.logging.Logger;
 
 /**
  * GP-983, ADR-0028: geodata are a kind of file of the catalog of mosaikit-ext (EXT-105). A file of a
- * format the geodata load becomes a dataset: stored, it is copied and loaded into PostGIS or COG as an
- * upload is (GP-936, GP-937), with its state recorded on the file; replaced, it is loaded again;
+ * format the geodata load becomes a dataset: stored, it is loaded into PostGIS or COG as an upload is
+ * (GP-936, GP-937), read through the catalog without a copy (EXT-107), with its state recorded on the file; replaced, it is loaded again;
  * deleted, its dataset goes with its table, its COG and its grants; shared differently, the GeoFence
  * rules of its published layers are written again. The catalog shows the preview, the states and the
  * action Publish that the frontend contributes to {@code catalog.file-kind}.
@@ -116,26 +115,40 @@ public class GeodataFileKind implements FileKind {
         }
     }
 
-    /** A file stored, replaced, or found again when the geodata came back: its dataset, loaded. */
+    /**
+     * A file stored, replaced, or found again when the geodata came back or were updated: its dataset,
+     * loaded from the file through the catalog (EXT-107), without a copy.
+     */
     private void stored(CatalogFile file, FileEvent.Change change) {
         Optional<UploadedData> known = uploads.byCatalogFile(file.id());
-        if (known.isPresent() && change == FileEvent.Change.RECOGNIZED) {
-            states.record(file, known.get());
-            return;
-        }
-        try (InputStream content = file.open()) {
+        try {
+            if (known.isPresent() && change == FileEvent.Change.RECOGNIZED) {
+                // A copy kept before EXT-107 goes once the catalog shows that it serves the content.
+                datasets.dropCopy(known.get(), serves(file));
+                states.record(file, known.get());
+                return;
+            }
             UploadedData data = known.isPresent()
-                    ? datasets.replace(known.get(), file.name(), content, file.size(), null, null)
-                    : datasets.fromCatalog(file.id(), file.name(), content, file.size());
+                    ? datasets.followCatalog(known.get(), file.name(), file.mediaType(), file.size())
+                    : datasets.fromCatalog(file.id(), file.name(), file.mediaType(), file.size());
             states.record(file, data);
         } catch (UploadedDatasets.UploadRefused | QuotaExceededException | UploadLimit.TooLarge e) {
             // The file stays a file of the catalog; the geodata say why it is not a dataset.
             file.record(FileState.of(UploadedData.FAILED, detail(e.getMessage())));
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
         } catch (RuntimeException e) {
             LOG.warnf("The geodata of the file %s are made again at the next event: %s", file.id(), e.toString());
             throw e;
+        }
+    }
+
+    /** Whether the catalog serves the content of a file now: its first byte is read. */
+    static boolean serves(CatalogFile file) {
+        try (InputStream content = file.open()) {
+            return file.size() == 0 || content.read() >= 0;
+        } catch (IOException | RuntimeException e) {
+            LOG.warnf("The content of the file %s cannot be read through the catalog: its copy stays (%s)", file.id(),
+                    e.toString());
+            return false;
         }
     }
 
