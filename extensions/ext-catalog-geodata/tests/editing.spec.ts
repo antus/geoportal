@@ -262,7 +262,7 @@ test.describe('on GeoServer', () => {
       await panel.getByRole('button', { name: 'Assegna' }).click();
       const surveyors = panel.getByRole('list', { name: 'Rilevatori' });
       await expect(surveyors).toContainText(surveyor().user);
-      await expect(surveyors).toContainText('Livello sul dato: Scaricare');
+      await expect(surveyors).toContainText('Livello sul dato: Leggere e scaricare');
       await page.screenshot({ path: 'test-results/gp-036-assigned.png', fullPage: true });
 
       // The surveyor: the catalog learns that their profile holds the permission, and GeoFence lets them write.
