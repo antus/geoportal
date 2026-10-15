@@ -36,3 +36,4 @@ changed by a new record that supersedes it, never by editing it.
 | [0026](0026-the-loader-image-reads-kml-with-libkml.md) | The loader runs on the official GDAL image alpine-normal, which reads KML with LIBKML | Accepted |
 | [0027](0027-ext-catalog-geodata-its-own-id-api-and-schema.md) | ext-catalog-geodata has its own id, API and schema, and adopts the data of the catalog | Accepted |
 | [0028](0028-geodata-files-of-the-catalog-and-their-levels.md) | Geodata are files of the catalog, and the levels on a file reach its dataset | Accepted |
+| [0029](0029-layer-styles-are-documents-of-a-json-grammar.md) | Layer styles are documents of a JSON grammar, which the catalog keeps and translates | Accepted |

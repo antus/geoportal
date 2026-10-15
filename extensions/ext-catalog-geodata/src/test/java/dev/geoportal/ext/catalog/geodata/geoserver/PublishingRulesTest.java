@@ -8,6 +8,8 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import dev.geoportal.ext.catalog.geodata.style.LegacyStyle;
+import dev.geoportal.ext.catalog.geodata.style.StyleDocument;
 import java.io.StringReader;
 import java.util.List;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -28,7 +30,7 @@ class PublishingRulesTest {
     @Test
     @Tag("GP-114")
     void aStyleOfGeoportalBecomesTheSymbolizerOfTheGeometryOfTheData() throws Exception {
-        GeoportalStyle style = new GeoportalStyle("#FF0000", 0.5, "#00ff00", 2, 10, "square");
+        StyleDocument style = StyleDocument.fromLegacy(new LegacyStyle("#FF0000", 0.5, "#00ff00", 2, 10, "square"));
         String points = style.sld("stazioni", "Point");
         Document d = parse(points);
         assertEquals("StyledLayerDescriptor", d.getDocumentElement().getTagName());
@@ -54,12 +56,12 @@ class PublishingRulesTest {
     @Test
     @Tag("GP-114")
     void aStyleOfGeoportalIsChecked() {
-        assertThrows(IllegalArgumentException.class, () -> new GeoportalStyle("red", 0.5, "#000000", 1, 8, "circle"));
-        assertThrows(IllegalArgumentException.class, () -> new GeoportalStyle("#ff0000", 2, "#000000", 1, 8, "circle"));
-        assertThrows(IllegalArgumentException.class, () -> new GeoportalStyle("#ff0000", 0.5, "#000000", 99, 8, "circle"));
-        assertThrows(IllegalArgumentException.class, () -> new GeoportalStyle("#ff0000", 0.5, "#000000", 1, 8, "heart"));
+        assertThrows(IllegalArgumentException.class, () -> new LegacyStyle("red", 0.5, "#000000", 1, 8, "circle"));
+        assertThrows(IllegalArgumentException.class, () -> new LegacyStyle("#ff0000", 2, "#000000", 1, 8, "circle"));
+        assertThrows(IllegalArgumentException.class, () -> new LegacyStyle("#ff0000", 0.5, "#000000", 99, 8, "circle"));
+        assertThrows(IllegalArgumentException.class, () -> new LegacyStyle("#ff0000", 0.5, "#000000", 1, 8, "heart"));
         // Nothing of the input reaches the SLD but checked colors, numbers and shapes.
-        assertFalse(GeoportalStyle.DEFAULT.sld("a", "Point").contains("<script"));
+        assertFalse(StyleDocument.defaults().sld("a", "Point").contains("<script"));
     }
 
     @Test

@@ -1,0 +1,8 @@
+{
+  "grammar": "geoportal/style/v1",
+  "type": "line",
+  "config": { "dash": [6, 3] },
+  "style": { "stroke": "#c0392b", "strokeOpacity": 0.9, "strokeWidth": 2 },
+  "label": { "text": { "field": "nome" }, "color": "#333333", "size": 11, "halo": { "color": "#ffffff", "width": 1.5 } },
+  "legend": { "title": "Percorsi ciclabili" }
+}

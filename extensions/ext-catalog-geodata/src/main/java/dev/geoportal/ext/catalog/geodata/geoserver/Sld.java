@@ -18,11 +18,11 @@ import org.xml.sax.SAXException;
  * whitespace between elements do not count, so that a style GeoServer keeps in another layout is not
  * rewritten at every alignment, while any change of an element, attribute or value is seen.
  */
-final class Sld {
+public final class Sld {
 
     private Sld() {}
 
-    static boolean same(String held, String wanted) {
+    public static boolean same(String held, String wanted) {
         Document a = parse(held);
         Document b = parse(wanted);
         if (a == null || b == null) {

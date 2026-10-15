@@ -12,6 +12,21 @@
 
 import { dataRulesSection } from './data-rules.js';
 import { assignedBadge, editingSection, myLayers } from './editing.js';
+import {
+  constantOf,
+  defaultStyle,
+  fromPanel,
+  kindOf,
+  LABEL_PANEL,
+  migrate,
+  PANEL,
+  representable,
+  retype,
+  symbolFor,
+  toPanel,
+  TYPES,
+  validate,
+} from './style-grammar.js';
 
 const API = '/api/v1/ext/catalog-geodata/publications';
 const GEOSERVER = '/api/v1/ext/catalog-geodata/geoserver';
@@ -64,6 +79,42 @@ const TEXTS = {
     strokeWidth: 'Spessore del bordo (px)',
     pointSize: 'Dimensione del simbolo (px)',
     pointShape: 'Forma del simbolo',
+    symbolType: 'Tipo di simbolo',
+    types: { point: 'Punto', line: 'Linea', polygon: 'Poligono', mixed: 'Tutte le geometrie' },
+    strokeOpacity: 'Opacità della linea',
+    lineColor: 'Colore della linea',
+    lineWidth: 'Spessore della linea (px)',
+    labelField: 'Etichetta (attributo)',
+    noLabel: 'nessuna',
+    labelColor: 'Colore dell’etichetta',
+    labelSize: 'Dimensione dell’etichetta (px)',
+    notRepresentable: 'Lo stile ha valori che il pannello non mostra (guidati dai dati, o diversi per geometria): modificali nel documento JSON; una modifica nel pannello li sostituisce.',
+    document: 'Documento di stile (JSON)',
+    exportStyle: 'Esporta JSON',
+    importStyle: 'Importa JSON…',
+    documentHint: 'Il formato geoportal/style/v1: si copia tra livelli, mappe e installazioni.',
+    problems: {
+      json: 'Il testo non è JSON valido.',
+      object: 'deve essere un oggetto',
+      grammar: 'la grammatica è geoportal/style/v1',
+      enum: (p) => `uno tra ${p.allowed.join(', ')}`,
+      unknown: 'non previsto qui',
+      required: 'obbligatorio',
+      color: 'un colore #rrggbb',
+      number: (p) => `un numero da ${p.min} a ${p.max}`,
+      field: 'il nome di un attributo: lettere, cifre e _, senza cifra iniziale',
+      driver: 'uno solo tra categories, graduated e scaled; categories va con otherwise',
+      count: (p) => (p.count ? `ne servono ${p.count}` : 'numero di elementi non valido'),
+      breaks: 'da 1 a 50 numeri crescenti',
+      from: 'due numeri, il primo minore',
+      duplicate: 'un’altra categoria ha lo stesso valore',
+      scalar: 'un testo, un numero, true o false',
+      string: (p) => `un testo fino a ${p.max} caratteri`,
+      boolean: 'true o false',
+      text: 'un testo, {"field": …} o {"template": …}',
+      template: 'un testo in cui {nome} indica un attributo',
+      dash: 'da 2 a 8 numeri, tratto e spazio alternati',
+    },
     shapes: { circle: 'Cerchio', square: 'Quadrato', triangle: 'Triangolo', star: 'Stella', cross: 'Croce', x: 'X' },
     cancel: 'Annulla',
     retry: 'Riprova',
@@ -90,6 +141,7 @@ const TEXTS = {
       'not-loaded': 'Il dato non è caricato nel database dei dati geografici: caricalo di nuovo prima di pubblicarlo.',
       'not-vector': 'Le immagini si pubblicheranno quando GeoServer servirà i Cloud Optimized GeoTIFF.',
       invalid: 'Il nome o lo stile non sono validi.',
+      'invalid-style': 'Lo stile non è un documento geoportal/style/v1 valido.',
       conflict: 'L’operazione è in conflitto con lo stato del catalogo.',
     },
     whatToDo: { retry: 'Puoi riprovare.', correct: 'Correggi e riprova.' },
@@ -185,6 +237,42 @@ const TEXTS = {
     strokeWidth: 'Stroke width (px)',
     pointSize: 'Symbol size (px)',
     pointShape: 'Symbol shape',
+    symbolType: 'Symbol type',
+    types: { point: 'Point', line: 'Line', polygon: 'Polygon', mixed: 'All geometries' },
+    strokeOpacity: 'Line opacity',
+    lineColor: 'Line color',
+    lineWidth: 'Line width (px)',
+    labelField: 'Label (attribute)',
+    noLabel: 'none',
+    labelColor: 'Label color',
+    labelSize: 'Label size (px)',
+    notRepresentable: 'The style has values the panel does not show (driven by the data, or different per geometry): change them in the JSON document; a change in the panel replaces them.',
+    document: 'Style document (JSON)',
+    exportStyle: 'Export JSON',
+    importStyle: 'Import JSON…',
+    documentHint: 'The format geoportal/style/v1: it copies between layers, maps and installations.',
+    problems: {
+      json: 'The text is not valid JSON.',
+      object: 'must be an object',
+      grammar: 'the grammar is geoportal/style/v1',
+      enum: (p) => `one of ${p.allowed.join(', ')}`,
+      unknown: 'not allowed here',
+      required: 'required',
+      color: 'a color #rrggbb',
+      number: (p) => `a number from ${p.min} to ${p.max}`,
+      field: 'the name of an attribute: letters, digits and _, not starting with a digit',
+      driver: 'one of categories, graduated and scaled; categories goes with otherwise',
+      count: (p) => (p.count ? `${p.count} needed` : 'not a valid number of items'),
+      breaks: 'from 1 to 50 increasing numbers',
+      from: 'two numbers, the first lower',
+      duplicate: 'another category has the same value',
+      scalar: 'a text, a number, true or false',
+      string: (p) => `a text up to ${p.max} characters`,
+      boolean: 'true or false',
+      text: 'a text, {"field": …} or {"template": …}',
+      template: 'a text where {name} stands for an attribute',
+      dash: 'from 2 to 8 numbers, dash and gap alternately',
+    },
     shapes: { circle: 'Circle', square: 'Square', triangle: 'Triangle', star: 'Star', cross: 'Cross', x: 'X' },
     cancel: 'Cancel',
     retry: 'Try again',
@@ -209,6 +297,7 @@ const TEXTS = {
       'not-loaded': 'The dataset is not loaded into the geodata database: load it again before publishing it.',
       'not-vector': 'Images will be published when GeoServer serves Cloud Optimized GeoTIFF.',
       invalid: 'The name or the style is not valid.',
+      'invalid-style': 'The style is not a valid geoportal/style/v1 document.',
       conflict: 'The operation conflicts with the state of the catalog.',
     },
     whatToDo: { retry: 'You can try again.', correct: 'Correct it and try again.' },
@@ -353,6 +442,17 @@ const DIALOG_STYLE = `
   dialog.publish fieldset { border: 1px solid var(--mk-line); border-radius: var(--mk-radius); padding: 10px 12px; margin: 0;
     display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   dialog.publish legend, dialog.publish .sld-head { font-size: 13px; font-weight: 600; color: var(--mk-fg); }
+  dialog.publish fieldset .wide { grid-column: 1 / -1; }
+  dialog.publish fieldset [hidden] { display: none; }
+  dialog.publish .note { color: var(--mk-fg); background: var(--mk-bg); border-radius: var(--mk-radius); padding: 6px 8px; }
+  dialog.publish details.document { display: flex; flex-direction: column; gap: 6px; }
+  dialog.publish details.document summary { cursor: pointer; font-size: 13px; font-weight: 600; }
+  dialog.publish details.document textarea { width: 100%; box-sizing: border-box; font-size: 12px; color: var(--mk-fg);
+    background: var(--mk-bg); border: 1px solid var(--mk-line); border-radius: var(--mk-radius); padding: 8px;
+    font-family: var(--mk-font-mono, ui-monospace, monospace); margin-top: 6px; }
+  dialog.publish .doc-problems { color: var(--mk-danger, #c0392b); }
+  dialog.publish .doc-problems:empty { display: none; }
+  dialog.publish .document-row { align-items: center; }
   dialog.publish .swatch { grid-column: 1 / -1; display: flex; justify-content: center; padding: 8px; background: var(--mk-bg);
     border-radius: var(--mk-radius); }
   dialog.publish pre.sld { margin: 4px 0 0; height: 300px; overflow: auto; background: var(--mk-bg);
@@ -364,6 +464,12 @@ const DIALOG_STYLE = `
 `;
 
 const language = (context) => (context.locale ?? 'en').split('-')[0];
+
+/** A problem of a style document (GP-009) in the language of the person: where, and what is expected. */
+function problemText(t, problem) {
+  const what = t.problems[problem.code];
+  return `${problem.path || '/'}: ${typeof what === 'function' ? what(problem) : (what ?? problem.code)}.`;
+}
 const texts = (context) => TEXTS[language(context)] ?? TEXTS.en;
 
 /** The body of a refused call: the problem detail of the catalog, or what can be said of the status. */
@@ -441,7 +547,11 @@ export function openPublishDialog(context, root, dataset, options = {}) {
   dialog.className = 'publish';
   dialog.setAttribute('aria-labelledby', 'publish-title');
   const republishing = Boolean(options.layer);
-  const style = { fill: '#2f80ed', fillOpacity: 0.45, stroke: '#1b4f9c', strokeWidth: 1.5, pointSize: 8, pointShape: 'circle', ...(options.style ?? {}) };
+  // GP-009: the style is a document of geoportal/style/v1; the panel is a facade over it.
+  const initial = options.style ? migrate(options.style) : null;
+  let doc = initial && validate(initial).length === 0
+    ? initial
+    : defaultStyle(kindOf(options.geometryType ?? dataset.loaded?.geometryType));
   dialog.innerHTML = `<style>${DIALOG_STYLE}</style>
     <form method="dialog" novalidate>
       <h3 id="publish-title"></h3>
@@ -450,20 +560,34 @@ export function openPublishDialog(context, root, dataset, options = {}) {
       <p class="muted small">${t.layerHint}</p>
       <div class="styles">
         <fieldset><legend>${t.geoportalStyle}</legend>
-          <label>${t.fill}<input type="color" name="fill" /></label>
-          <label>${t.fillOpacity}<input type="number" name="fillOpacity" min="0" max="1" step="0.05" /></label>
-          <label>${t.stroke}<input type="color" name="stroke" /></label>
-          <label>${t.strokeWidth}<input type="number" name="strokeWidth" min="0" max="20" step="0.5" /></label>
-          <label>${t.pointSize}<input type="number" name="pointSize" min="1" max="64" step="1" /></label>
-          <label>${t.pointShape}<select name="pointShape">${Object.entries(t.shapes)
+          <label class="wide">${t.symbolType}<select name="type">${TYPES.map((k) => `<option value="${k}">${t.types[k]}</option>`).join('')}</select></label>
+          <label data-key="shape">${t.pointShape}<select name="shape">${Object.entries(t.shapes)
             .map(([k, v]) => `<option value="${k}">${v}</option>`)
             .join('')}</select></label>
-          <div class="swatch" aria-hidden="true"><svg width="120" height="40" viewBox="0 0 120 40">
-            <rect x="4" y="6" width="44" height="28" rx="2"></rect><circle cx="88" cy="20" r="8"></circle></svg></div>
+          <label data-key="fill">${t.fill}<input type="color" name="fill" /></label>
+          <label data-key="fillOpacity">${t.fillOpacity}<input type="number" name="fillOpacity" min="0" max="1" step="0.05" /></label>
+          <label data-key="stroke"><span class="text"></span><input type="color" name="stroke" /></label>
+          <label data-key="strokeOpacity">${t.strokeOpacity}<input type="number" name="strokeOpacity" min="0" max="1" step="0.05" /></label>
+          <label data-key="strokeWidth"><span class="text"></span><input type="number" name="strokeWidth" min="0" max="64" step="0.5" /></label>
+          <label data-key="size">${t.pointSize}<input type="number" name="size" min="1" max="64" step="1" /></label>
+          <label>${t.labelField}<input name="labelField" maxlength="63" placeholder="${t.noLabel}" autocomplete="off" /></label>
+          <label data-key="labelColor">${t.labelColor}<input type="color" name="labelColor" /></label>
+          <label data-key="labelSize">${t.labelSize}<input type="number" name="labelSize" min="6" max="72" step="1" /></label>
+          <p class="note small wide" role="status" hidden>${t.notRepresentable}</p>
+          <div class="swatch" aria-hidden="true"><svg width="160" height="40" viewBox="0 0 160 40">
+            <rect x="4" y="6" width="44" height="28" rx="2"></rect><path d="M60 32 L100 8"></path><circle cx="132" cy="20" r="8"></circle></svg></div>
         </fieldset>
         <div><div class="sld-head" id="sld-head">${t.geoserverStyle}</div>
           <pre class="sld mono" aria-labelledby="sld-head" tabindex="0"></pre></div>
       </div>
+      <div class="document-row actions"><button type="button" class="export">${t.exportStyle}</button>
+        <button type="button" class="import">${t.importStyle}</button>
+        <input type="file" name="styleFile" accept=".json,application/json" hidden />
+        <span class="muted small">${t.documentHint}</span></div>
+      <p class="doc-problems small" role="status"></p>
+      <details class="document"><summary>${t.document}</summary>
+        <textarea name="document" class="mono" aria-label="${t.document}" spellcheck="false" rows="12"></textarea>
+      </details>
       <div class="failure"></div>
       <div class="row-end"><button type="button" class="cancel">${t.cancel}</button>
         <button type="button" class="primary confirm">${republishing ? t.republish : t.publish}</button></div>
@@ -474,37 +598,70 @@ export function openPublishDialog(context, root, dataset, options = {}) {
   const name = form.querySelector('input[name=layer]');
   name.value = options.layer ?? dataset.technicalName;
   name.readOnly = republishing;
-  for (const [key, value] of Object.entries(style)) {
-    const input = form.querySelector(`[name=${key}]`);
-    if (input) {
-      input.value = String(value);
+  const area = form.querySelector('textarea[name=document]');
+  const docProblems = dialog.querySelector('.doc-problems');
+  /** The values of the panel, for the fields of a type. */
+  const readPanel = (type) => {
+    const p = { type };
+    for (const k of [...PANEL[type], ...LABEL_PANEL]) {
+      const input = form.querySelector(`[name=${k}]`);
+      p[k] = input.type === 'number' ? Number(input.value) : input.value.trim();
     }
-  }
-  const read = () => ({
-    fill: form.fill.value,
-    fillOpacity: Number(form.fillOpacity.value),
-    stroke: form.stroke.value,
-    strokeWidth: Number(form.strokeWidth.value),
-    pointSize: Number(form.pointSize.value),
-    pointShape: form.pointShape.value,
-  });
+    return p;
+  };
+  /** The JSON of the document, and whether the panel shows all of it. */
+  const renderDocument = () => {
+    area.value = JSON.stringify(doc, null, 2);
+    docProblems.textContent = '';
+    dialog.querySelector('.note').hidden = representable(doc);
+  };
+  /** The panel of the document; the JSON too, unless the person is writing it. */
+  const render = (fromArea = false) => {
+    const p = toPanel(doc);
+    form.querySelector('[name=type]').value = p.type;
+    for (const k of [...PANEL[p.type], ...LABEL_PANEL]) {
+      form.querySelector(`[name=${k}]`).value = String(p[k]);
+    }
+    for (const label of form.querySelectorAll('fieldset label[data-key]')) {
+      const key = label.dataset.key;
+      label.hidden = !PANEL[p.type].includes(key) && !LABEL_PANEL.includes(key);
+    }
+    const ofLine = p.type === 'line';
+    form.querySelector('label[data-key=stroke] .text').textContent = ofLine ? t.lineColor : t.stroke;
+    form.querySelector('label[data-key=strokeWidth] .text').textContent = ofLine ? t.lineWidth : t.strokeWidth;
+    if (fromArea) {
+      dialog.querySelector('.note').hidden = representable(doc);
+    } else {
+      renderDocument();
+    }
+  };
   const sld = dialog.querySelector('pre.sld');
   sld.textContent = t.translating;
   const swatch = () => {
-    const s = read();
-    for (const shape of dialog.querySelectorAll('.swatch rect, .swatch circle')) {
-      shape.setAttribute('fill', s.fill);
-      shape.setAttribute('fill-opacity', String(s.fillOpacity));
-      shape.setAttribute('stroke', s.stroke);
-      shape.setAttribute('stroke-width', String(s.strokeWidth));
-    }
-    dialog.querySelector('.swatch circle').setAttribute('r', String(Math.min(18, s.pointSize / 2)));
+    const paint = (shape, fill, fillOpacity, stroke, strokeWidth) => {
+      shape.setAttribute('fill', fill);
+      shape.setAttribute('fill-opacity', String(fillOpacity));
+      shape.setAttribute('stroke', stroke);
+      shape.setAttribute('stroke-width', String(strokeWidth));
+    };
+    const point = symbolFor(doc, 'point').style;
+    const line = symbolFor(doc, 'line').style;
+    const poly = symbolFor(doc, 'polygon').style;
+    const c = (v, fallback) => constantOf(v, fallback);
+    paint(dialog.querySelector('.swatch rect'), c(poly.fill, '#888888'), c(poly.fillOpacity, 1), c(poly.stroke, '#444444'), c(poly.strokeWidth, 1));
+    paint(dialog.querySelector('.swatch path'), 'none', 0, c(line.stroke, '#444444'), c(line.strokeWidth, 1));
+    dialog.querySelector('.swatch path').setAttribute('stroke-opacity', String(c(line.strokeOpacity, 1)));
+    const circle = dialog.querySelector('.swatch circle');
+    paint(circle, c(point.fill, '#888888'), c(point.fillOpacity, 1), c(point.stroke, '#444444'), c(point.strokeWidth, 1));
+    circle.setAttribute('r', String(Math.min(18, c(point.size, 8) / 2)));
   };
   let pending = 0;
   // GP-309: a raster is published with the default raster style of GeoServer, no style of Geoportal.
   const raster = Boolean(options.raster) || dataset.loaded?.geometryType === 'Raster';
   if (raster) {
     dialog.querySelector('.styles').hidden = true;
+    dialog.querySelector('.document').hidden = true;
+    dialog.querySelector('.document-row').hidden = true;
   }
   const translate = async () => {
     if (raster) {
@@ -517,7 +674,7 @@ export function openPublishDialog(context, root, dataset, options = {}) {
     const response = await context.fetch(`${API}/style-translation`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ dataset: dataset.id, layer: name.value.trim(), style: read() }),
+      body: JSON.stringify({ dataset: dataset.id, layer: name.value.trim(), style: doc }),
     });
     if (mine !== pending) {
       return;
@@ -530,8 +687,76 @@ export function openPublishDialog(context, root, dataset, options = {}) {
     }
     sld.textContent = (await response.json()).sld;
   };
-  form.addEventListener('input', () => void translate());
-  form.addEventListener('change', () => void translate());
+  /** A document written or imported as JSON: taken when valid, its problems shown otherwise. */
+  const take = (text) => {
+    let parsed;
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      docProblems.textContent = t.problems.json;
+      return false;
+    }
+    const problems = validate(migrate(parsed));
+    if (problems.length > 0) {
+      docProblems.textContent = problems.slice(0, 5).map((p) => problemText(t, p)).join(' ');
+      return false;
+    }
+    doc = migrate(parsed);
+    docProblems.textContent = '';
+    render(true);
+    void translate();
+    return true;
+  };
+  form.addEventListener('input', (event) => {
+    const field = event.target.name;
+    if (field === 'document') {
+      take(area.value);
+    } else if (field !== 'type' && field !== 'layer' && field !== 'styleFile') {
+      // The fields stay as the person writes them; the document follows when they make a valid one.
+      const next = fromPanel(readPanel(doc.type), doc);
+      const problems = validate(next);
+      if (problems.length > 0) {
+        docProblems.textContent = problems.slice(0, 5).map((p) => problemText(t, p)).join(' ');
+        return;
+      }
+      doc = next;
+      renderDocument();
+      void translate();
+    } else if (field === 'layer') {
+      void translate();
+    }
+  });
+  form.querySelector('[name=type]').addEventListener('change', (event) => {
+    // GP-009: what has the same meaning in the new type stays.
+    doc = retype(doc, event.target.value);
+    render();
+    void translate();
+  });
+  dialog.querySelector('.export').addEventListener('click', () => {
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(new Blob([`${JSON.stringify(doc, null, 2)}\n`], { type: 'application/json' }));
+    link.download = `${name.value.trim() || 'stile'}.style.json`;
+    dialog.append(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(link.href), 10_000);
+  });
+  const file = form.querySelector('input[name=styleFile]');
+  dialog.querySelector('.import').addEventListener('click', () => file.click());
+  file.addEventListener('change', async () => {
+    const chosen = file.files?.[0];
+    if (!chosen) {
+      return;
+    }
+    const text = await chosen.text();
+    area.value = text;
+    dialog.querySelector('details.document').open = true;
+    if (take(text)) {
+      renderDocument();
+    }
+    file.value = '';
+  });
+  render();
   dialog.querySelector('.cancel').addEventListener('click', () => dialog.close());
   const submit = async () => {
     const button = form.querySelector('button.confirm');
@@ -543,12 +768,12 @@ export function openPublishDialog(context, root, dataset, options = {}) {
         ? await context.fetch(`${API}/${encodeURIComponent(options.layer)}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ style: read() }),
+            body: JSON.stringify({ style: doc }),
           })
         : await context.fetch(API, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ dataset: dataset.id, layer: name.value.trim(), style: read() }),
+            body: JSON.stringify({ dataset: dataset.id, layer: name.value.trim(), style: doc }),
           });
       if (!response.ok) {
         failure.append(explain(context, response.status, await problemOf(response), () => void submit()));
@@ -775,6 +1000,7 @@ export function definePublications(context) {
           openPublishDialog(context, this.root, { id: p.dataset, title: p.datasetTitle, technicalName: p.datasetName }, {
             layer: p.name,
             style: p.styleSource ?? undefined,
+            geometryType: p.geometryType,
             onDone: (message) => this.say(message),
           }),
         );

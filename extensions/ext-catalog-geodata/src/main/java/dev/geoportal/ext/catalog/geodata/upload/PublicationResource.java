@@ -6,15 +6,17 @@ import static dev.geoportal.ext.catalog.geodata.upload.UploadedDatasets.EXTENSIO
 import static dev.geoportal.ext.catalog.geodata.upload.UploadedDatasets.TYPE;
 import static dev.geoportal.ext.catalog.geodata.upload.UploadedDatasets.ref;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import dev.geoportal.ext.catalog.geodata.access.AccessRules;
 import dev.geoportal.ext.catalog.geodata.geoserver.Failure;
 import dev.geoportal.ext.catalog.geodata.geoserver.GeoServerException;
 import dev.geoportal.ext.catalog.geodata.geoserver.GeoServerGovernance;
-import dev.geoportal.ext.catalog.geodata.geoserver.GeoportalStyle;
 import dev.geoportal.ext.catalog.geodata.geoserver.OgcGate;
 import dev.geoportal.ext.catalog.geodata.geoserver.PublishedLayer;
 import dev.geoportal.ext.catalog.geodata.gateway.DataRequests;
 import dev.geoportal.ext.catalog.geodata.gateway.Gateway;
+import dev.geoportal.ext.catalog.geodata.style.InvalidStyleException;
+import dev.geoportal.ext.catalog.geodata.style.StyleDocument;
 import dev.mosaikit.kernel.api.context.CurrentOrganization;
 import dev.mosaikit.kernel.api.permission.Permissions;
 import dev.mosaikit.kernel.api.quota.Quotas;
@@ -113,7 +115,7 @@ public class PublicationResource {
             String datasetName,
             String geometryType,
             String style,
-            GeoportalStyle styleSource,
+            JsonNode styleSource,
             Health health,
             Instant publishedAt,
             Map<String, String> services,
@@ -121,11 +123,14 @@ public class PublicationResource {
             String level,
             boolean canPublish) {}
 
-    /** What the publishing dialog sends: the dataset, the name of the layer, the style of Geoportal. */
-    public record PublishBody(UUID dataset, String layer, GeoportalStyle style) {}
+    /**
+     * What the publishing dialog sends: the dataset, the name of the layer, the style of Geoportal (a
+     * document of geoportal/style/v1, GP-009; the six values of before are migrated).
+     */
+    public record PublishBody(UUID dataset, String layer, JsonNode style) {}
 
     /** A new style for a published layer, or none to publish its current data again. */
-    public record RepublishBody(GeoportalStyle style) {}
+    public record RepublishBody(JsonNode style) {}
 
     public record RepointBody(UUID dataset) {}
 
@@ -171,15 +176,24 @@ public class PublicationResource {
         if (body == null || body.dataset() == null) {
             return Failure.correct(400, "invalid", "Name the dataset.").response();
         }
+        StyleDocument style;
+        try {
+            style = style(body.style());
+        } catch (InvalidStyleException e) {
+            return invalid(e);
+        }
         sharing.require(ref(body.dataset()), "view");
         UploadedData data = find(body.dataset());
-        GeoportalStyle style = body.style() == null ? GeoportalStyle.DEFAULT : body.style();
         String layer = body.layer() == null || body.layer().isBlank() ? data.technicalName() : body.layer();
         Map<String, Object> answer = new LinkedHashMap<>();
         answer.put("geometryType", data.geometryType());
-        answer.put("style", style);
-        // A raster (GP-309) is drawn with the default raster style of GeoServer.
-        answer.put("sld", RasterPublishing.raster(data) ? null : publishing.translate(data, layer, style));
+        answer.put("style", style.tree());
+        try {
+            // A raster (GP-309) is drawn with the default raster style of GeoServer.
+            answer.put("sld", RasterPublishing.raster(data) ? null : publishing.translate(data, layer, style));
+        } catch (InvalidStyleException e) {
+            return invalid(e);
+        }
         return Response.ok(answer).build();
     }
 
@@ -192,9 +206,15 @@ public class PublicationResource {
         if (body == null || body.dataset() == null) {
             return Failure.correct(400, "invalid", "Name the dataset to publish.").response();
         }
+        // GP-009: the style is checked when it is saved, before anything else.
+        StyleDocument style;
+        try {
+            style = style(body.style());
+        } catch (InvalidStyleException e) {
+            return invalid(e);
+        }
         sharing.require(ref(body.dataset()), "manage");
         UploadedData data = find(body.dataset());
-        GeoportalStyle style = body.style() == null ? GeoportalStyle.DEFAULT : body.style();
         String layer = body.layer() == null || body.layer().isBlank() ? data.technicalName() : body.layer().strip();
         if (RasterPublishing.raster(data)) {
             return answer(() -> rasters.publish(data, layer), data, Response.Status.CREATED);
@@ -214,7 +234,13 @@ public class PublicationResource {
         if (layer.raster()) {
             return answer(() -> rasters.publish(data, layer.name()), data, Response.Status.OK);
         }
-        return answer(() -> publishing.republish(data, layer, body == null ? null : body.style()), data, Response.Status.OK);
+        StyleDocument style;
+        try {
+            style = body == null || body.style() == null || body.style().isNull() ? null : StyleDocument.of(body.style());
+        } catch (InvalidStyleException e) {
+            return invalid(e);
+        }
+        return answer(() -> publishing.republish(data, layer, style), data, Response.Status.OK);
     }
 
     /** Points the layer at another dataset (level manage on both). */
@@ -349,6 +375,16 @@ public class PublicationResource {
         return layer;
     }
 
+    /** The style of a request, checked (GP-009): the default one when none is given. */
+    private static StyleDocument style(JsonNode style) {
+        return style == null || style.isNull() ? StyleDocument.defaults() : StyleDocument.of(style);
+    }
+
+    /** A style that is not a document of the grammar: 400 invalid-style, with what is wrong where. */
+    private static Response invalid(InvalidStyleException e) {
+        return Failure.correct(400, "invalid-style", e.getMessage()).response();
+    }
+
     private UploadedData find(UUID id) {
         return uploads.byId(id).orElseThrow(jakarta.ws.rs.NotFoundException::new);
     }
@@ -365,8 +401,9 @@ public class PublicationResource {
                     : API + layer.name() + "/ogc/" + (kind.equals("wmts") ? "gwc/service/wmts" : kind) + "?" + query);
         }
         String style = layer.definition().style();
-        GeoportalStyle source = style == null ? null
-                : geoserver.style(style).flatMap(s -> DatasetPublishing.parse(s.source())).orElse(null);
+        JsonNode source = style == null ? null
+                : geoserver.style(style).flatMap(s -> DatasetPublishing.parse(s.source())).map(StyleDocument::tree)
+                        .orElse(null);
         Health health = new Health(layer.health() == null ? "unknown" : layer.health(), layer.healthCode(),
                 layer.healthReason(), layer.healthCheckedAt());
         return new PublicationView(layer.name(), layer.definition().title(), data.id(), data.title(),

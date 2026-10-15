@@ -42,6 +42,7 @@ branding/theme     name, logo and colors of Geoportal (theme extension dev.geopo
 distribution/      installation, portable, server (Docker Compose), cloud (Helm)
 docs/requirements/ GP-nnn.md of the product as a whole (format of Mosaikit), and check.py that checks them all
 docs/adr/          architecture decision records
+docs/style/        the style grammar geoportal/style/v1 of layers: reference, JSON Schema, examples
 docs/design/       the mockup of the Geoportal pages, in the frame of Mosaikit
 ```
 

@@ -4,17 +4,15 @@ package dev.geoportal.ext.catalog.geodata.upload;
 
 import static dev.geoportal.ext.catalog.geodata.upload.UploadedDatasets.EXTENSION;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.geoportal.ext.catalog.geodata.geoserver.Alignment;
 import dev.geoportal.ext.catalog.geodata.geoserver.Failure;
 import dev.geoportal.ext.catalog.geodata.geoserver.GeoServerException;
 import dev.geoportal.ext.catalog.geodata.geoserver.GeoServerGovernance;
-import dev.geoportal.ext.catalog.geodata.geoserver.GeoportalStyle;
 import dev.geoportal.ext.catalog.geodata.geoserver.LayerDefinition;
 import dev.geoportal.ext.catalog.geodata.geoserver.PublishedLayer;
 import dev.geoportal.ext.catalog.geodata.geoserver.PublishedStyle;
 import dev.geoportal.ext.catalog.geodata.geoserver.StyleDefinition;
+import dev.geoportal.ext.catalog.geodata.style.StyleDocument;
 import dev.mosaikit.kernel.api.audit.AuditLog;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.time.Instant;
@@ -47,7 +45,6 @@ public class DatasetPublishing {
     CatalogStates states;
 
     private static final Logger LOG = Logger.getLogger(DatasetPublishing.class);
-    private static final ObjectMapper JSON = new ObjectMapper();
 
     private final GeoServerGovernance geoserver;
     private final UploadedDataRepository uploads;
@@ -74,7 +71,7 @@ public class DatasetPublishing {
     }
 
     /** The SLD GeoServer would receive for a style of Geoportal on the data of a dataset. */
-    public String translate(UploadedData data, String layer, GeoportalStyle style) {
+    public String translate(UploadedData data, String layer, StyleDocument style) {
         return style.sld(layer, data.geometryType());
     }
 
@@ -89,7 +86,7 @@ public class DatasetPublishing {
      * Publishes a loaded vector dataset as a layer of the GeoServer workspace of the organization,
      * named {@code layer}, with the style of Geoportal translated into SLD.
      */
-    public Outcome publish(UploadedData data, String layer, GeoportalStyle style) {
+    public Outcome publish(UploadedData data, String layer, StyleDocument style) {
         Optional<Failure> refused = publishable(data);
         if (refused.isPresent()) {
             return Outcome.failed(refused.get());
@@ -123,7 +120,7 @@ public class DatasetPublishing {
         }
 
         Instant now = Instant.now();
-        geoserver.keepTranslated(new StyleDefinition(layer, style.sld(layer, data.geometryType())), json(style));
+        geoserver.keepTranslated(new StyleDefinition(layer, style.sld(layer, data.geometryType())), style.json());
         geoserver.publish(definition(data, layer, layer));
         PublishedLayer published = geoserver.layer(layer).orElseThrow();
         published.serves(data.id(), now);
@@ -147,7 +144,7 @@ public class DatasetPublishing {
         data.published(now);
         uploads.update(data);
         states.mirror(data);
-        record("layer.published", layer, data, AuditLog.Outcome.SUCCEEDED, Map.of("style", json(style)));
+        record("layer.published", layer, data, AuditLog.Outcome.SUCCEEDED, Map.of("style", style.json()));
         return Outcome.done(published);
     }
 
@@ -171,15 +168,15 @@ public class DatasetPublishing {
      * Publishes a layer again with the current data of its dataset and, when given, a new style: same
      * name, so the maps that use it keep working; bounding boxes recomputed and cached tiles deleted.
      */
-    public Outcome republish(UploadedData data, PublishedLayer layer, GeoportalStyle style) {
+    public Outcome republish(UploadedData data, PublishedLayer layer, StyleDocument style) {
         Optional<Failure> refused = publishable(data);
         if (refused.isPresent()) {
             return Outcome.failed(refused.get());
         }
         String name = layer.name();
         String styleName = styleOf(layer);
-        GeoportalStyle chosen = style != null ? style : source(styleName).orElse(GeoportalStyle.DEFAULT);
-        geoserver.keepTranslated(new StyleDefinition(styleName, chosen.sld(styleName, data.geometryType())), json(chosen));
+        StyleDocument chosen = style != null ? style : source(styleName).orElse(StyleDocument.defaults());
+        geoserver.keepTranslated(new StyleDefinition(styleName, chosen.sld(styleName, data.geometryType())), chosen.json());
         geoserver.publish(definition(data, name, styleName));
         PublishedLayer current = geoserver.layer(name).orElseThrow();
         current.serves(data.id(), Instant.now());
@@ -193,7 +190,7 @@ public class DatasetPublishing {
         data.published(Instant.now());
         uploads.update(data);
         states.mirror(data);
-        record("layer.republished", name, data, AuditLog.Outcome.SUCCEEDED, Map.of("style", json(chosen)));
+        record("layer.republished", name, data, AuditLog.Outcome.SUCCEEDED, Map.of("style", chosen.json()));
         return Outcome.done(current);
     }
 
@@ -211,8 +208,8 @@ public class DatasetPublishing {
         }
         String name = layer.name();
         String styleName = styleOf(layer);
-        GeoportalStyle chosen = source(styleName).orElse(GeoportalStyle.DEFAULT);
-        geoserver.keepTranslated(new StyleDefinition(styleName, chosen.sld(styleName, to.geometryType())), json(chosen));
+        StyleDocument chosen = source(styleName).orElse(StyleDocument.defaults());
+        geoserver.keepTranslated(new StyleDefinition(styleName, chosen.sld(styleName, to.geometryType())), chosen.json());
         geoserver.publish(definition(to, name, styleName));
         PublishedLayer current = geoserver.layer(name).orElseThrow();
         current.serves(to.id(), Instant.now());
@@ -221,7 +218,7 @@ public class DatasetPublishing {
         if (failed.isPresent()) {
             if (from != null && from.tableName() != null) {
                 geoserver.keepTranslated(new StyleDefinition(styleName, chosen.sld(styleName, from.geometryType())),
-                        json(chosen));
+                        chosen.json());
                 geoserver.publish(definition(from, name, styleName));
                 PublishedLayer back = geoserver.layer(name).orElseThrow();
                 back.serves(from.id(), Instant.now());
@@ -361,26 +358,23 @@ public class DatasetPublishing {
         return style == null ? layer.name() : style;
     }
 
-    private Optional<GeoportalStyle> source(String style) {
+    private Optional<StyleDocument> source(String style) {
         return geoserver.style(style).map(PublishedStyle::source).flatMap(DatasetPublishing::parse);
     }
 
-    static Optional<GeoportalStyle> parse(String json) {
+    /**
+     * The style document kept with a style, migrated when it was written before the grammar (GP-009);
+     * empty for an SLD written as such, or a source that is not a style any more.
+     */
+    public static Optional<StyleDocument> parse(String json) {
         if (json == null) {
             return Optional.empty();
         }
         try {
-            return Optional.of(JSON.readValue(json, GeoportalStyle.class));
-        } catch (JsonProcessingException | IllegalArgumentException e) {
+            return Optional.of(StyleDocument.parse(json));
+        } catch (IllegalArgumentException e) {
+            LOG.warnf("A kept style is not a style of Geoportal, its SLD stays as it is: %s", e.getMessage());
             return Optional.empty();
-        }
-    }
-
-    static String json(GeoportalStyle style) {
-        try {
-            return JSON.writeValueAsString(style);
-        } catch (JsonProcessingException e) {
-            throw new IllegalStateException(e);
         }
     }
 
