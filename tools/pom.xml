@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SPDX-FileCopyrightText: 2026 Massimo Antonini
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <!--
+      GP-983: the extensions of mosaikit-ext that Geoportal composes, built from the commit pinned in
+      mosaikit-ext.json by mosaikit-ext.mjs, with the API libraries of their contracts (ext-catalog-api)
+      installed into the local Maven repository. The first module of the aggregator, so that the
+      extensions that compile against those libraries find them; an extension built on its own needs
+      `node tools/mosaikit-ext.mjs` first (npm run dev and the CI do it).
+    -->
+    <groupId>dev.geoportal</groupId>
+    <artifactId>geoportal-mosaikit-ext</artifactId>
+    <version>2.0.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+    <name>Geoportal: extensions of mosaikit-ext</name>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.5.1</version>
+                <executions>
+                    <execution>
+                        <id>mosaikit-ext</id>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <executable>node</executable>
+                            <arguments>
+                                <argument>${project.basedir}/mosaikit-ext.mjs</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

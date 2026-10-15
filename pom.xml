@@ -30,6 +30,9 @@
     </properties>
 
     <modules>
+        <!-- First: the extensions of mosaikit-ext and the API of their contracts (GP-983), which
+             ext-catalog-geodata compiles against. -->
+        <module>tools</module>
         <module>extensions/ext-catalog-geodata</module>
         <module>extensions/maps</module>
         <module>extensions/dashboards</module>

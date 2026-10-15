@@ -139,6 +139,9 @@ jobs:
         with:
           version: 0.1.0-SNAPSHOT
           installation: 'true'
+      - name: Extensions of mosaikit-ext and the API of their contracts (GP-983)
+        if: steps.scope.outputs.run == 'true'
+        run: node tools/mosaikit-ext.mjs
       - name: Tests of the catalog against GeoServer and PostGIS
         if: steps.scope.outputs.run == 'true'
         working-directory: extensions/ext-catalog-geodata

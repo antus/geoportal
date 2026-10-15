@@ -34,7 +34,8 @@ distributions, until they are published.
 pom.xml            aggregator: the extensions, the branding, the distributions
 package.json       npm run dev: Mosaikit with every extension and the Geoportal theme
 mosaikit-ext.json  the commit of mosaikit-ext whose extensions Geoportal composes
-tools/             mosaikit-ext.mjs: builds those extensions from that commit (MOSAIKIT_EXT_SOURCE: a clone)
+tools/             mosaikit-ext.mjs builds those extensions from that commit (MOSAIKIT_EXT_SOURCE: a clone);
+                   its pom.xml is the first module of the aggregator
 extensions/        ext-catalog-geodata (Java backend, schema ext_catalog_geodata), maps, dashboards, processes;
                    each with docs/requirements/ for the requirements it implements alone
 branding/theme     name, logo and colors of Geoportal (theme extension dev.geoportal.theme)
