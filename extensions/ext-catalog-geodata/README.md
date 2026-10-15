@@ -321,7 +321,11 @@ the credentials, no GeoServer, no geodata database, no loader), they are stored 
 (`geodata-missing`), like any upload there (`tests/portable.spec.ts`, issue #50). The catalog reads its
 credentials (`Credentials`) each in a transaction of its own as well, because a read the kernel refuses
 (an installation without a master key) would otherwise mark the transaction of the request for rollback,
-even when the catalog goes on without the credential.
+even when the catalog goes on without the credential. Without a master key the events of a new
+organization (`OrganizationEvents`) are audited as `geoserver.aligned` failed and not delivered again, as
+without the credentials of GeoServer (issue #53). The page asks the shell for the permissions of the person
+and probes GeoServer only for who holds `manage-geoserver`, so that the others get no refused request
+(issue #54).
 
 **Limits for now**, platform needs reported to Mosaikit: a file of the organization in the file service is
 readable by every member through `/api/v1/files/dev.geoportal.ext.catalog.geodata`, whatever the sharing of its

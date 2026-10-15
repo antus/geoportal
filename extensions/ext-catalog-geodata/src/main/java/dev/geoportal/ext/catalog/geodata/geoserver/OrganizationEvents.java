@@ -6,6 +6,7 @@ import dev.mosaikit.kernel.api.audit.AuditLog;
 import dev.mosaikit.kernel.api.events.PlatformEvent;
 import dev.mosaikit.kernel.api.events.PlatformEventSubscriber;
 import dev.mosaikit.kernel.api.events.PlatformEvents;
+import dev.mosaikit.kernel.api.secrets.SecretsUnavailableException;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.util.Map;
 import java.util.Set;
@@ -22,7 +23,8 @@ import org.jboss.logging.Logger;
  * its own ({@link GeoServerGovernance}). Every step is idempotent, as an event may come twice:
  *
  * <ul>
- *   <li>without the credentials nothing can be done, and retrying would not help: the outcome is
+ *   <li>without the credentials, or without a store of credentials (an installation with no master key,
+ *       such as the portable one), nothing can be done, and retrying would not help: the outcome is
  *       written to the audit log of the organization and the first alignment does the work later;
  *   <li>when GeoServer or the geodata database do not answer, or refuse the workspace or the store,
  *       the handler fails and Mosaikit delivers the event again later;
@@ -78,7 +80,7 @@ public class OrganizationEvents implements PlatformEventSubscriber {
         Alignment result;
         try {
             result = governance.align();
-        } catch (GeoServerGovernance.MissingCredentialException e) {
+        } catch (GeoServerGovernance.MissingCredentialException | SecretsUnavailableException e) {
             pending(event, "geoserver.aligned", e);
             return;
         }
@@ -100,7 +102,7 @@ public class OrganizationEvents implements PlatformEventSubscriber {
             Alignment result = governance.withdraw();
             LOG.infof("Publications of the organization %s withdrawn from GeoServer: %d layers", event.organization(),
                     result.changes().size());
-        } catch (GeoServerGovernance.MissingCredentialException e) {
+        } catch (GeoServerGovernance.MissingCredentialException | SecretsUnavailableException e) {
             pending(event, "geoserver.withdrawn", e);
         }
     }

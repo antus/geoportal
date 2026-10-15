@@ -899,6 +899,15 @@ export function definePublications(context) {
     // Reconciliation (GP-118), for those who manage the GeoServer publication -------------------
 
     async probeReconciliation() {
+      // Only who holds manage-geoserver may reconcile: ask the shell first, so that the others do not get a
+      // 403 at each visit (issue #54). The backend checks anyway.
+      const permissions = await context.fetch('/api/v1/shell/permissions');
+      const answer = permissions.ok ? await permissions.json() : [];
+      const held = Array.isArray(answer) ? answer : (answer.permissions ?? []);
+      if (!held.includes('dev.geoportal.catalog:manage-geoserver')) {
+        this.root.querySelector('.reconciliation').hidden = true;
+        return;
+      }
       const response = await context.fetch(`${GEOSERVER}/layers`);
       this.root.querySelector('.reconciliation').hidden = !response.ok;
     }

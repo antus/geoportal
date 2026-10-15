@@ -10,6 +10,7 @@ import dev.geoportal.ext.catalog.geodata.geoserver.Alignment.Change;
 import dev.mosaikit.kernel.api.audit.AuditLog;
 import dev.mosaikit.kernel.api.events.PlatformEvent;
 import dev.mosaikit.kernel.api.events.PlatformEvents;
+import dev.mosaikit.kernel.api.secrets.SecretsUnavailableException;
 import java.lang.reflect.Proxy;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -116,6 +117,17 @@ class OrganizationEventsTest {
         assertEquals("geoserver.aligned", audited.get(0).action());
         assertEquals(AuditLog.Outcome.FAILED, audited.get(0).outcome());
         assertTrue(audited.get(0).details().toString().contains("organization.created"));
+    }
+
+    @Test
+    void withoutAStoreOfCredentialsTheOutcomeIsAuditedAndNotRetried() {
+        // The portable installation has no master key: the kernel refuses every read of a credential (#53).
+        governance.failure = new SecretsUnavailableException("The store of credentials is disabled");
+        events.handle(event(PlatformEvents.ORGANIZATION_CREATED, Map.of("slug", "acme")));
+        events.handle(event(PlatformEvents.EXTENSION_DISABLED, Map.of("extension", "dev.geoportal.catalog")));
+        assertEquals(List.of("geoserver.aligned", "geoserver.withdrawn"),
+                audited.stream().map(AuditLog.Entry::action).toList());
+        assertTrue(audited.stream().allMatch(e -> e.outcome() == AuditLog.Outcome.FAILED));
     }
 
     @Test
