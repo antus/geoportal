@@ -1,5 +1,4 @@
 -- SPDX-FileCopyrightText: 2026 Massimo Antonini
--- SPDX-License-Identifier: AGPL-3.0-or-later
 --
 -- PROOF STUB (GP-327, phase F01): the personal keys for QGIS of the proofs in prototypes/f01,
 -- read by the AuthKey web service mapper through ProofStubResource (schema ext_proofstub). GP-336 replaces it.

@@ -74,6 +74,9 @@ embedded PostgreSQL. Test what you changed; the CI runs everything.
   in its comment syntax; a file that cannot carry a comment is covered by `REUSE.toml`. Synthetic
   sample data are `CC0-1.0`; third-party files keep their own licence, with its text in `LICENSES/`.
   `reuse lint` must pass (the CI runs it).
+- **Applied migrations are never edited**, not even their comments: Flyway checksums the whole file
+  and an installation that applied it refuses to start. A mass change (headers, formatting, renames)
+  leaves every `V*__*.sql` that may have been applied as it is; its licence goes in `REUSE.toml`.
 - **Commits** are signed off (`git commit -s`, DCO), small, pushed often. Never `git add -A` in a
   tree another session may share; never a bare `git stash`.
 - **Mosaikit is public.** When Geoportal needs something of the platform, it becomes a generic MK

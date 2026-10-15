@@ -46,6 +46,7 @@ path = [
   "extensions/ext-catalog-geodata/db/V10__layer_assignments.sql",
   "extensions/ext-catalog-geodata/db/V11__rasters_and_service_rules.sql",
   "extensions/ext-catalog-geodata/db/V12__catalog_files.sql",
+  "prototypes/f01/proof-stub/db/V1__personal_key.sql",
 ]
 precedence = "aggregate"
 SPDX-FileCopyrightText = "2026 Massimo Antonini"
