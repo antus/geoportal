@@ -3,7 +3,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { api, bench, member, openApp, signIn, unique } from '@mosaikit/testing/playwright';
 import { FILE_MANAGER, GEODATA } from './composition.js';
-import { MANAGER } from './people.js';
 
 /**
  * GP-339, the Geoportal pages of the console, in Italian:
@@ -127,8 +126,9 @@ const GEOSERVER = !!process.env.GEOPORTAL_TEST_GEOSERVER;
 const owner = (): Person => member(0);
 const manager = (): Person => member(1);
 const colleague = (): Person => member(2);
-// The third person of the bench, without a grant on the dataset of the tests.
-const stranger = (): Person => MANAGER;
+// The second person of the bench: an administrator only to store the credentials, then without any grant on the
+// dataset of the tests.
+const stranger = (): Person => member(1);
 const exception = (person: Person, permission: string): string =>
   `/api/v1/organizations/${organization()}/permissions/members/${person.user}/exceptions/${EXTENSION}:${permission}`;
 
@@ -206,7 +206,6 @@ test.describe('GP-339 on GeoServer', () => {
 
   test.beforeAll(async () => {
     await role(colleague(), false);
-    await role(stranger(), false);
     await role(manager(), true);
     for (const p of ['upload-data', 'publish']) {
       expect((await api(manager(), exception(owner(), p), { method: 'PUT' })).status).toBe(200);
@@ -231,9 +230,12 @@ test.describe('GP-339 on GeoServer', () => {
       body: JSON.stringify({ subject: { kind: 'person', id: await accountOf(colleague()) }, level: 'read' }),
     });
     expect(grant.status).toBeLessThan(300);
+    // From here the second person is a member without a grant on the dataset; its owner manages it.
+    await role(manager(), false);
   });
 
   test.afterAll(async () => {
+    await role(manager(), true);
     if (dataset) {
       await api(owner(), `${UPLOADS}/${dataset.id}`, { method: 'DELETE' });
     }
@@ -275,7 +277,7 @@ test.describe('GP-339 on GeoServer', () => {
     })).status).toBe(403);
 
     // In the page: the dialog of a new rule shows the preview as the rule is written.
-    await signIn(page, manager());
+    await signIn(page, owner());
     await openApp(page, 'Dati geografici');
     await page.locator('tr.row', { hasText: layer }).click();
     const section = page.getByRole('region', { name: 'Regole sui dati' });
@@ -313,7 +315,7 @@ test.describe('GP-339 on GeoServer', () => {
 
   test('GP-339 the diagnosis names the missing grant or the data rule that hides the data', async ({ page }) => {
     const diagnose = async (person: Person) =>
-      (await api(manager(), `${DIAGNOSIS}?${new URLSearchParams({ layer, person: person.user })}`)).body as {
+      (await api(owner(), `${DIAGNOSIS}?${new URLSearchParams({ layer, person: person.user })}`)).body as {
         verdict: string;
         missing: string | null;
         level: string | null;
@@ -353,7 +355,7 @@ test.describe('GP-339 on GeoServer', () => {
     expect(changed.status, JSON.stringify(changed.body)).toBe(200);
 
     // In the page.
-    await signIn(page, manager());
+    await signIn(page, owner());
     await openApp(page, 'Dati geografici');
     await page.getByRole('tab', { name: 'Perché non vede i dati' }).click();
     await expect(page).toHaveURL(/\/app\/geodata\/accesso$/);
