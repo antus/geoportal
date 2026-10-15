@@ -214,6 +214,20 @@ test.beforeAll(async () => {
   state.personalKeyId = key.body.id ?? key.body.key?.id;
 });
 
+test('GP-983 the server stack runs ext-catalog-geodata next to ext-catalog and ext-catalog-connection, its data adopted by the service adopt-catalog', async () => {
+  const { status, body } = await api(ADMIN, '/api/v1/extensions');
+  expect(status).toBe(200);
+  const active = new Map((body as { id: string; status: string }[]).map((e) => [e.id, e.status]));
+  for (const id of [EXTENSION, 'io.github.mosaikit.ext.catalog', 'io.github.mosaikit.ext.catalog.connection']) {
+    expect(active.get(id), id).toBe('ACTIVE');
+  }
+  expect(active.has('dev.geoportal.catalog')).toBe(false);
+  // The one-shot service that adopts the schema of the old catalog ran before Geoportal, and ended well.
+  const ps = execFileSync('docker', ['compose', '-p', PROJECT, ...FILES, 'ps', '-a', '--format', '{{.Service}} {{.ExitCode}}'],
+    { encoding: 'utf8', cwd: DIST });
+  expect(ps).toMatch(/^adopt-catalog 0$/m);
+});
+
 test('GP-336 a browser with the session reads WMS and WFS through the gateway, and sees its addresses in the catalog', async ({ browser }) => {
   const context = await signedIn(browser, ada);
   const page = await context.newPage();
