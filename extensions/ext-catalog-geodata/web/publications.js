@@ -15,18 +15,42 @@ import { assignedBadge, editingSection, myLayers } from './editing.js';
 import {
   constantOf,
   defaultStyle,
-  fromPanel,
+  KINDS,
   kindOf,
+  LABEL_DEFAULTS,
   LABEL_PANEL,
   migrate,
   PANEL,
-  representable,
   retype,
   symbolFor,
-  toPanel,
   TYPES,
   validate,
 } from './style-grammar.js';
+import {
+  boundTo,
+  categorize,
+  classLabels,
+  cleanBreaks,
+  editedKind,
+  equalBreaks,
+  graduate,
+  LABEL_PROPERTIES,
+  modeOf,
+  PALETTES,
+  paletteColors,
+  PROPERTIES,
+  rangeValues,
+  scale,
+  sortValues,
+  SYMBOL_TYPES,
+  symbolTypeOf,
+  valueOf,
+  withConfig,
+  withLabel,
+  withSymbolType,
+  withValue,
+} from './style-themes.js';
+import { drawPreview, legendImage, miniature, SYMBOLOGY_STYLE, symbolSvg } from './symbology.js';
 
 const API = '/api/v1/ext/catalog-geodata/publications';
 const GEOSERVER = '/api/v1/ext/catalog-geodata/geoserver';
@@ -88,7 +112,55 @@ const TEXTS = {
     noLabel: 'nessuna',
     labelColor: 'Colore dell’etichetta',
     labelSize: 'Dimensione dell’etichetta (px)',
-    notRepresentable: 'Lo stile ha valori che il pannello non mostra (guidati dai dati, o diversi per geometria): modificali nel documento JSON; una modifica nel pannello li sostituisce.',
+    notRepresentable: 'L’etichetta dello stile è un testo fisso o un modello, che il pannello non mostra: modificala nel documento JSON; scegliere un attributo nel pannello la sostituisce.',
+    // GP-973: symbol types, geometries, thematic styles, the preview.
+    geometry: 'Geometria da modificare',
+    geometries: { point: 'Punti', line: 'Linee', polygon: 'Poligoni' },
+    symbolTypes: 'Simbolo',
+    symbolTypeNames: {
+      circle: 'Cerchio', square: 'Quadrato', triangle: 'Triangolo', star: 'Stella', cross: 'Croce', x: 'X',
+      solid: 'Linea continua', dashed: 'Linea tratteggiata', dotted: 'Linea a punti', filled: 'Poligono pieno', outline: 'Solo contorno',
+    },
+    boundTo: (f) => `dal dato «${f}»`,
+    theme: 'Stile tematico',
+    themeHint: 'Lega una proprietà a un attributo: un valore per categoria, per classi di valori o proporzionale al valore.',
+    themeProperty: 'Proprietà',
+    properties: {
+      fill: 'Colore di riempimento', fillOpacity: 'Opacità del riempimento', stroke: 'Colore del bordo o della linea',
+      strokeOpacity: 'Opacità della linea', strokeWidth: 'Spessore del bordo o della linea', size: 'Dimensione del simbolo',
+      labelColor: 'Colore dell’etichetta', labelSize: 'Dimensione dell’etichetta',
+    },
+    themeMode: 'Valori',
+    modes: { constant: 'Uguali per tutti', categories: 'Per categoria', graduated: 'Per classi di valori', scaled: 'Proporzionali al valore' },
+    themeField: 'Attributo',
+    noAttributes: 'Nessun attributo adatto',
+    palette: 'Tavolozza',
+    palettes: { vivid: 'Vivace', soft: 'Tenue', earth: 'Terra', blues: 'Blu', greens: 'Verdi', reds: 'Rossi', heat: 'Calore', diverging: 'Rosso – blu' },
+    classCount: 'Numero di classi',
+    method: 'Metodo',
+    methods: { equal: 'Intervalli uguali', quantile: 'Quantili' },
+    rangeFrom: 'Dal valore',
+    rangeTo: 'Al valore',
+    generate: 'Genera classi',
+    classList: 'Classi',
+    classValue: (l) => `Valore della classe ${l}`,
+    otherwise: 'Altri valori',
+    generatedCategories: (n, f) => (n === 1 ? `1 categoria da «${f}».` : `${n} categorie da «${f}», una per valore.`),
+    generatedClasses: (n, f) => `${n} classi da «${f}».`,
+    generatedScaled: (f) => `Proporzionale a «${f}».`,
+    moreValues: (n) => `L’attributo ha più di ${n} valori: gli altri prendono il valore di «Altri valori».`,
+    noValues: 'L’attributo non ha valori.',
+    needsNumber: 'Serve un attributo numerico.',
+    single: 'L’attributo ha un solo valore: non si divide in classi.',
+    chooseField: 'Scegli un attributo.',
+    valuesFailed: (s) => `I valori dell’attributo non si possono leggere (${s}).`,
+    preview: 'Anteprima',
+    symbolPreview: 'Anteprima del simbolo',
+    mapPreview: 'Anteprima sulla mappa',
+    mapNone: 'Nessun elemento da disegnare.',
+    mapCount: (n) => (n === 1 ? '1 elemento del dato.' : `${n} elementi del dato.`),
+    mapUnavailable: (s) => `L’anteprima sulla mappa non è disponibile (${s}).`,
+    legend: 'Legenda',
     document: 'Documento di stile (JSON)',
     exportStyle: 'Esporta JSON',
     importStyle: 'Importa JSON…',
@@ -246,7 +318,53 @@ const TEXTS = {
     noLabel: 'none',
     labelColor: 'Label color',
     labelSize: 'Label size (px)',
-    notRepresentable: 'The style has values the panel does not show (driven by the data, or different per geometry): change them in the JSON document; a change in the panel replaces them.',
+    notRepresentable: 'The label of the style is a fixed text or a template, which the panel does not show: change it in the JSON document; choosing an attribute in the panel replaces it.',
+    geometry: 'Geometry to edit',
+    geometries: { point: 'Points', line: 'Lines', polygon: 'Polygons' },
+    symbolTypes: 'Symbol',
+    symbolTypeNames: {
+      circle: 'Circle', square: 'Square', triangle: 'Triangle', star: 'Star', cross: 'Cross', x: 'X',
+      solid: 'Solid line', dashed: 'Dashed line', dotted: 'Dotted line', filled: 'Filled polygon', outline: 'Outline only',
+    },
+    boundTo: (f) => `from the data “${f}”`,
+    theme: 'Thematic style',
+    themeHint: 'Bind a property to an attribute: a value per category, per class of values or proportional to the value.',
+    themeProperty: 'Property',
+    properties: {
+      fill: 'Fill color', fillOpacity: 'Fill opacity', stroke: 'Stroke or line color', strokeOpacity: 'Line opacity',
+      strokeWidth: 'Stroke or line width', size: 'Symbol size', labelColor: 'Label color', labelSize: 'Label size',
+    },
+    themeMode: 'Values',
+    modes: { constant: 'The same for all', categories: 'By category', graduated: 'By classes of values', scaled: 'Proportional to the value' },
+    themeField: 'Attribute',
+    noAttributes: 'No suitable attribute',
+    palette: 'Palette',
+    palettes: { vivid: 'Vivid', soft: 'Soft', earth: 'Earth', blues: 'Blues', greens: 'Greens', reds: 'Reds', heat: 'Heat', diverging: 'Red – blue' },
+    classCount: 'Number of classes',
+    method: 'Method',
+    methods: { equal: 'Equal intervals', quantile: 'Quantiles' },
+    rangeFrom: 'From the value',
+    rangeTo: 'To the value',
+    generate: 'Generate classes',
+    classList: 'Classes',
+    classValue: (l) => `Value of the class ${l}`,
+    otherwise: 'Other values',
+    generatedCategories: (n, f) => (n === 1 ? `1 category from “${f}”.` : `${n} categories from “${f}”, one per value.`),
+    generatedClasses: (n, f) => `${n} classes from “${f}”.`,
+    generatedScaled: (f) => `Proportional to “${f}”.`,
+    moreValues: (n) => `The attribute has more than ${n} values: the others take the value of “Other values”.`,
+    noValues: 'The attribute has no values.',
+    needsNumber: 'A numeric attribute is needed.',
+    single: 'The attribute has one value only: it does not split into classes.',
+    chooseField: 'Choose an attribute.',
+    valuesFailed: (s) => `The values of the attribute cannot be read (${s}).`,
+    preview: 'Preview',
+    symbolPreview: 'Preview of the symbol',
+    mapPreview: 'Preview on the map',
+    mapNone: 'Nothing to draw.',
+    mapCount: (n) => (n === 1 ? '1 feature of the dataset.' : `${n} features of the dataset.`),
+    mapUnavailable: (s) => `The preview on the map is not available (${s}).`,
+    legend: 'Legend',
     document: 'Style document (JSON)',
     exportStyle: 'Export JSON',
     importStyle: 'Import JSON…',
@@ -412,12 +530,13 @@ const STYLE = `
   pre.sld { margin: 4px 0 0; max-height: 300px; overflow: auto; background: var(--mk-bg); border: 1px solid var(--mk-line);
     border-radius: var(--mk-radius); padding: 10px; font-size: 11px; white-space: pre; }
   [role=status]:empty { display: none; }
+  td .look { margin-top: 4px; }
 `;
 
 /** The publishing dialog brings its own rules: it opens in the shadow root of the uploaded data too. */
 const DIALOG_STYLE = `
   dialog.publish { border: 1px solid var(--mk-line); border-radius: var(--mk-radius); background: var(--mk-surface);
-    color: var(--mk-fg); padding: 20px; width: min(920px, calc(100vw - 32px)); }
+    color: var(--mk-fg); padding: 20px; width: min(1040px, calc(100vw - 32px)); }
   dialog.publish::backdrop { background: rgb(0 0 0 / 40%); }
   dialog.publish form { display: flex; flex-direction: column; gap: 12px; }
   dialog.publish h3 { margin: 0; font-size: 17px; }
@@ -437,7 +556,7 @@ const DIALOG_STYLE = `
   dialog.publish .small { font-size: 13px; }
   dialog.publish .row-end, dialog.publish .actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
   dialog.publish .actions { justify-content: flex-start; }
-  dialog.publish .styles { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 16px; }
+  dialog.publish .styles { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 16px; align-items: start; }
   @media (max-width: 720px) { dialog.publish .styles { grid-template-columns: minmax(0, 1fr); } }
   dialog.publish fieldset { border: 1px solid var(--mk-line); border-radius: var(--mk-radius); padding: 10px 12px; margin: 0;
     display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -453,9 +572,24 @@ const DIALOG_STYLE = `
   dialog.publish .doc-problems { color: var(--mk-danger, #c0392b); }
   dialog.publish .doc-problems:empty { display: none; }
   dialog.publish .document-row { align-items: center; }
-  dialog.publish .swatch { grid-column: 1 / -1; display: flex; justify-content: center; padding: 8px; background: var(--mk-bg);
+  dialog.publish .editor, dialog.publish .side { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  dialog.publish .symbol-types { display: flex; flex-wrap: wrap; gap: 4px; }
+  dialog.publish .symbol-types button { padding: 3px; line-height: 0; }
+  dialog.publish .symbol-types button[aria-checked=true] { border-color: var(--mk-accent); box-shadow: inset 0 0 0 1px var(--mk-accent); }
+  dialog.publish label .bound { color: var(--mk-accent); font-size: 11px; }
+  dialog.publish label .bound:empty { display: none; }
+  dialog.publish figure.preview { margin: 0; display: flex; flex-direction: column; gap: 6px; }
+  dialog.publish .swatch { display: flex; gap: 14px; justify-content: center; padding: 8px; background: var(--mk-bg);
     border-radius: var(--mk-radius); }
-  dialog.publish pre.sld { margin: 4px 0 0; height: 300px; overflow: auto; background: var(--mk-bg);
+  dialog.publish .swatch svg.edited { outline: 1px dashed var(--mk-muted); outline-offset: 2px; }
+  dialog.publish svg.map { width: 100%; height: auto; aspect-ratio: 16 / 10; background: var(--mk-bg);
+    border: 1px solid var(--mk-line); border-radius: var(--mk-radius); }
+  dialog.publish ol.classes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px;
+    max-height: 220px; overflow: auto; }
+  dialog.publish ol.classes li { display: flex; gap: 8px; align-items: center; font-size: 13px; color: var(--mk-fg); }
+  dialog.publish ol.classes input[type=color] { width: 44px; height: 26px; padding: 1px; }
+  dialog.publish ol.classes input[type=number] { width: 90px; }
+  dialog.publish pre.sld { margin: 4px 0 0; height: 220px; overflow: auto; background: var(--mk-bg);
     border: 1px solid var(--mk-line); border-radius: var(--mk-radius); padding: 10px; font-size: 11px; white-space: pre;
     font-family: var(--mk-font-mono, ui-monospace, monospace); }
   dialog.publish .explained { border: 1px solid var(--mk-danger, #c0392b); border-radius: var(--mk-radius); padding: 10px 12px;
@@ -552,33 +686,59 @@ export function openPublishDialog(context, root, dataset, options = {}) {
   let doc = initial && validate(initial).length === 0
     ? initial
     : defaultStyle(kindOf(options.geometryType ?? dataset.loaded?.geometryType));
-  dialog.innerHTML = `<style>${DIALOG_STYLE}</style>
+  /** GP-973: the geometry whose symbol the panel edits, in a style with one per geometry. */
+  let chosenKind = 'point';
+  const field = (key, label, input) => `<label data-key="${key}"><span class="text">${label}</span> <small class="bound"></small>${input}</label>`;
+  dialog.innerHTML = `<style>${DIALOG_STYLE}${SYMBOLOGY_STYLE}</style>
     <form method="dialog" novalidate>
       <h3 id="publish-title"></h3>
       <dl><dt>${t.destination}</dt><dd>${t.destinationValue}</dd></dl>
       <label>${t.layerName}<input name="layer" maxlength="63" pattern="[a-z][a-z0-9_]{0,62}" required /></label>
       <p class="muted small">${t.layerHint}</p>
       <div class="styles">
-        <fieldset><legend>${t.geoportalStyle}</legend>
+        <div class="editor">
+        <fieldset class="symbol"><legend>${t.geoportalStyle}</legend>
           <label class="wide">${t.symbolType}<select name="type">${TYPES.map((k) => `<option value="${k}">${t.types[k]}</option>`).join('')}</select></label>
+          <label class="wide geometry">${t.geometry}<select name="geometry" aria-label="${t.geometry}">${KINDS.map((k) => `<option value="${k}">${t.geometries[k]}</option>`).join('')}</select></label>
+          <div class="wide symbol-types" role="radiogroup" aria-label="${t.symbolTypes}"></div>
           <label data-key="shape">${t.pointShape}<select name="shape">${Object.entries(t.shapes)
             .map(([k, v]) => `<option value="${k}">${v}</option>`)
             .join('')}</select></label>
-          <label data-key="fill">${t.fill}<input type="color" name="fill" /></label>
-          <label data-key="fillOpacity">${t.fillOpacity}<input type="number" name="fillOpacity" min="0" max="1" step="0.05" /></label>
-          <label data-key="stroke"><span class="text"></span><input type="color" name="stroke" /></label>
-          <label data-key="strokeOpacity">${t.strokeOpacity}<input type="number" name="strokeOpacity" min="0" max="1" step="0.05" /></label>
-          <label data-key="strokeWidth"><span class="text"></span><input type="number" name="strokeWidth" min="0" max="64" step="0.5" /></label>
-          <label data-key="size">${t.pointSize}<input type="number" name="size" min="1" max="64" step="1" /></label>
+          ${field('fill', t.fill, '<input type="color" name="fill" />')}
+          ${field('fillOpacity', t.fillOpacity, '<input type="number" name="fillOpacity" min="0" max="1" step="0.05" />')}
+          ${field('stroke', t.stroke, '<input type="color" name="stroke" />')}
+          ${field('strokeOpacity', t.strokeOpacity, '<input type="number" name="strokeOpacity" min="0" max="1" step="0.05" />')}
+          ${field('strokeWidth', t.strokeWidth, '<input type="number" name="strokeWidth" min="0" max="64" step="0.5" />')}
+          ${field('size', t.pointSize, '<input type="number" name="size" min="1" max="64" step="1" />')}
           <label>${t.labelField}<input name="labelField" maxlength="63" placeholder="${t.noLabel}" autocomplete="off" /></label>
-          <label data-key="labelColor">${t.labelColor}<input type="color" name="labelColor" /></label>
-          <label data-key="labelSize">${t.labelSize}<input type="number" name="labelSize" min="6" max="72" step="1" /></label>
+          ${field('labelColor', t.labelColor, '<input type="color" name="labelColor" />')}
+          ${field('labelSize', t.labelSize, '<input type="number" name="labelSize" min="6" max="72" step="1" />')}
           <p class="note small wide" role="status" hidden>${t.notRepresentable}</p>
-          <div class="swatch" aria-hidden="true"><svg width="160" height="40" viewBox="0 0 160 40">
-            <rect x="4" y="6" width="44" height="28" rx="2"></rect><path d="M60 32 L100 8"></path><circle cx="132" cy="20" r="8"></circle></svg></div>
         </fieldset>
-        <div><div class="sld-head" id="sld-head">${t.geoserverStyle}</div>
-          <pre class="sld mono" aria-labelledby="sld-head" tabindex="0"></pre></div>
+        <fieldset class="theme"><legend>${t.theme}</legend>
+          <p class="muted small wide">${t.themeHint}</p>
+          <label>${t.themeProperty}<select name="themeProperty" aria-label="${t.themeProperty}"></select></label>
+          <label>${t.themeMode}<select name="themeMode" aria-label="${t.themeMode}">${Object.entries(t.modes).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select></label>
+          <label class="wide" data-theme="field">${t.themeField}<select name="themeField" aria-label="${t.themeField}"></select></label>
+          <label data-theme="palette">${t.palette}<select name="palette" aria-label="${t.palette}">${Object.keys(PALETTES).map((k) => `<option value="${k}">${t.palettes[k]}</option>`).join('')}</select></label>
+          <label data-theme="classes">${t.classCount}<input type="number" name="classes" aria-label="${t.classCount}" min="2" max="12" step="1" value="5" /></label>
+          <label data-theme="method">${t.method}<select name="method" aria-label="${t.method}">${Object.entries(t.methods).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select></label>
+          <label data-theme="range">${t.rangeFrom}<input type="number" name="rangeFrom" aria-label="${t.rangeFrom}" step="any" /></label>
+          <label data-theme="range">${t.rangeTo}<input type="number" name="rangeTo" aria-label="${t.rangeTo}" step="any" /></label>
+          <div class="wide actions" data-theme="generate"><button type="button" class="generate">${t.generate}</button></div>
+          <p class="wide small theme-status" role="status"></p>
+          <ol class="wide classes" aria-label="${t.classList}"></ol>
+        </fieldset>
+        </div>
+        <div class="side">
+          <figure class="preview"><figcaption class="sld-head">${t.preview}</figcaption>
+            <div class="swatch" role="img" aria-label="${t.symbolPreview}"></div>
+            <svg class="map" role="img" aria-label="${t.mapPreview}" viewBox="0 0 320 200" preserveAspectRatio="xMidYMid meet"></svg>
+            <p class="muted small map-note" role="status"></p>
+          </figure>
+          <div class="sld-head" id="sld-head">${t.geoserverStyle}</div>
+          <pre class="sld mono" aria-labelledby="sld-head" tabindex="0"></pre>
+        </div>
       </div>
       <div class="document-row actions"><button type="button" class="export">${t.exportStyle}</button>
         <button type="button" class="import">${t.importStyle}</button>
@@ -600,61 +760,322 @@ export function openPublishDialog(context, root, dataset, options = {}) {
   name.readOnly = republishing;
   const area = form.querySelector('textarea[name=document]');
   const docProblems = dialog.querySelector('.doc-problems');
-  /** The values of the panel, for the fields of a type. */
-  const readPanel = (type) => {
-    const p = { type };
-    for (const k of [...PANEL[type], ...LABEL_PANEL]) {
-      const input = form.querySelector(`[name=${k}]`);
-      p[k] = input.type === 'number' ? Number(input.value) : input.value.trim();
-    }
-    return p;
+  const kind = () => editedKind(doc, chosenKind);
+  const showProblems = (problems) => {
+    docProblems.textContent = problems.slice(0, 5).map((p) => problemText(t, p)).join(' ');
   };
   /** The JSON of the document, and whether the panel shows all of it. */
   const renderDocument = () => {
     area.value = JSON.stringify(doc, null, 2);
     docProblems.textContent = '';
-    dialog.querySelector('.note').hidden = representable(doc);
+    dialog.querySelector('.note').hidden = panelShowsAll(doc);
   };
-  /** The panel of the document; the JSON too, unless the person is writing it. */
+
+  // The data of the dataset the editor reads (GP-973): attributes, values, a sample for the map.
+  const UPLOADS = `/api/v1/ext/catalog-geodata/uploads/${encodeURIComponent(dataset.id)}`;
+  let attributes = [];
+  const valuesCache = new Map();
+  let features = null;
+  const readJson = async (path) => {
+    const response = await context.fetch(path);
+    if (!response.ok) {
+      throw new Error((await problemOf(response)).detail ?? String(response.status));
+    }
+    return response.json();
+  };
+  const valuesOf = (attribute, classes) => {
+    const key = `${attribute}:${classes}`;
+    if (!valuesCache.has(key)) {
+      const promise = readJson(`${UPLOADS}/attributes/${encodeURIComponent(attribute)}/values?classes=${classes}`);
+      promise.catch(() => valuesCache.delete(key));
+      valuesCache.set(key, promise);
+    }
+    return valuesCache.get(key);
+  };
+
+  // The live preview and the map ----------------------------------------------------------------
+  const swatch = dialog.querySelector('.swatch');
+  const mapSvg = dialog.querySelector('svg.map');
+  const mapNote = dialog.querySelector('.map-note');
+  const preview = () => {
+    const kinds = doc.type === 'mixed' ? KINDS : [doc.type];
+    swatch.replaceChildren(...kinds.map((k) => {
+      const s = symbolSvg(k, symbolFor(doc, k), 40);
+      s.classList.toggle('edited', k === kind());
+      return s;
+    }));
+    swatch.dataset.type = doc.type;
+    if (features) {
+      const drawn = drawPreview(mapSvg, doc, features);
+      mapSvg.dataset.features = String(drawn);
+      mapNote.textContent = drawn === 0 ? t.mapNone : t.mapCount(features.features.length);
+    }
+  };
+
+  // The panel -------------------------------------------------------------------------------------
+  const PANEL_FIELDS = (k) => PANEL[k];
   const render = (fromArea = false) => {
-    const p = toPanel(doc);
-    form.querySelector('[name=type]').value = p.type;
-    for (const k of [...PANEL[p.type], ...LABEL_PANEL]) {
-      form.querySelector(`[name=${k}]`).value = String(p[k]);
+    const k = kind();
+    form.querySelector('[name=type]').value = doc.type;
+    const geometry = form.querySelector('label.geometry');
+    geometry.hidden = doc.type !== 'mixed';
+    form.querySelector('[name=geometry]').value = k;
+    const symbol = doc.type === 'mixed' ? doc.geometries[k] : doc;
+    for (const key of PANEL_FIELDS(k)) {
+      const input = form.querySelector(`[name=${key}]`);
+      if (key === 'shape') {
+        input.value = symbol.config.shape;
+        continue;
+      }
+      const v = symbol.style[key];
+      input.value = String(constantOf(v, input.type === 'color' ? '#888888' : 1));
+      const by = boundTo(v);
+      input.disabled = Boolean(by);
+      form.querySelector(`label[data-key=${key}] .bound`).textContent = by ? t.boundTo(by) : '';
     }
-    for (const label of form.querySelectorAll('fieldset label[data-key]')) {
+    for (const label of form.querySelectorAll('fieldset.symbol label[data-key]')) {
       const key = label.dataset.key;
-      label.hidden = !PANEL[p.type].includes(key) && !LABEL_PANEL.includes(key);
+      label.hidden = !PANEL_FIELDS(k).includes(key) && !LABEL_PANEL.includes(key);
     }
-    const ofLine = p.type === 'line';
+    const l = doc.label;
+    form.querySelector('[name=labelField]').value = l && typeof l.text === 'object' && l.text.field ? l.text.field : '';
+    for (const [key, part, fallback] of [['labelColor', 'color', LABEL_DEFAULTS.color], ['labelSize', 'size', LABEL_DEFAULTS.size]]) {
+      const input = form.querySelector(`[name=${key}]`);
+      const v = l?.[part];
+      input.value = String(l ? constantOf(v, fallback) : fallback);
+      const by = boundTo(v);
+      input.disabled = Boolean(by);
+      form.querySelector(`label[data-key=${key}] .bound`).textContent = by ? t.boundTo(by) : '';
+    }
+    const ofLine = k === 'line';
     form.querySelector('label[data-key=stroke] .text').textContent = ofLine ? t.lineColor : t.stroke;
     form.querySelector('label[data-key=strokeWidth] .text').textContent = ofLine ? t.lineWidth : t.strokeWidth;
+    renderSymbolTypes();
+    renderTheme();
     if (fromArea) {
-      dialog.querySelector('.note').hidden = representable(doc);
+      dialog.querySelector('.note').hidden = panelShowsAll(doc);
     } else {
       renderDocument();
     }
+    preview();
   };
+
+  /** GP-973: the visual menu of the symbol types of the edited geometry. */
+  const renderSymbolTypes = () => {
+    const k = kind();
+    const menu = dialog.querySelector('.symbol-types');
+    const current = symbolTypeOf(doc, k);
+    menu.replaceChildren(...SYMBOL_TYPES[k].map((type) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.setAttribute('role', 'radio');
+      button.setAttribute('aria-checked', String(type === current));
+      button.setAttribute('aria-label', t.symbolTypeNames[type]);
+      button.title = t.symbolTypeNames[type];
+      button.dataset.type = type;
+      button.append(symbolSvg(k, symbolFor(withSymbolType(doc, k, type), k), 28));
+      button.addEventListener('click', () => change(withSymbolType(doc, k, type)));
+      return button;
+    }));
+  };
+
+  // The thematic style ---------------------------------------------------------------------------
+  const theme = dialog.querySelector('fieldset.theme');
+  const themeStatus = theme.querySelector('.theme-status');
+  const control = (n) => theme.querySelector(`[name=${n}]`);
+  /** The properties of the edited geometry that data can drive, and those of the label when there is one. */
+  const themeProperties = () => [...Object.keys(PROPERTIES[kind()]), ...(doc.label ? Object.keys(LABEL_PROPERTIES) : [])];
+  const whatIs = (property) => PROPERTIES[kind()][property] ?? LABEL_PROPERTIES[property];
+  const renderTheme = () => {
+    const select = control('themeProperty');
+    const before = select.value;
+    const properties = themeProperties();
+    select.replaceChildren(...properties.map((p) => {
+      const option = document.createElement('option');
+      option.value = p;
+      option.textContent = t.properties[p] ?? p;
+      return option;
+    }));
+    select.value = properties.includes(before) ? before : properties[0];
+    showTheme();
+  };
+  /** The controls of the thematic style for the chosen property, as its value is driven now. */
+  const showTheme = (keepMode = false) => {
+    const property = control('themeProperty').value;
+    const v = valueOf(doc, kind(), property);
+    const mode = keepMode ? control('themeMode').value : modeOf(v);
+    control('themeMode').value = mode;
+    const isColor = whatIs(property) === 'color';
+    const numeric = mode === 'graduated' || mode === 'scaled';
+    const fieldSelect = control('themeField');
+    const chosen = boundTo(v) ?? fieldSelect.value;
+    const usable = attributes.filter((a) => !numeric || a.numeric);
+    fieldSelect.replaceChildren(...usable.map((a) => {
+      const option = document.createElement('option');
+      option.value = a.name;
+      option.textContent = a.name;
+      return option;
+    }));
+    if (usable.length === 0) {
+      const option = document.createElement('option');
+      option.value = '';
+      option.textContent = t.noAttributes;
+      fieldSelect.append(option);
+    }
+    fieldSelect.value = usable.some((a) => a.name === chosen) ? chosen : (usable[0]?.name ?? '');
+    const shown = {
+      field: mode !== 'constant',
+      palette: mode !== 'constant' && isColor,
+      classes: mode === 'graduated',
+      method: mode === 'graduated',
+      range: mode !== 'constant' && !isColor,
+      generate: mode !== 'constant',
+    };
+    for (const label of theme.querySelectorAll('[data-theme]')) {
+      label.hidden = !shown[label.dataset.theme];
+    }
+    if (!isColor && control('rangeFrom').value === '') {
+      const [min, max] = { opacity: [0.2, 1], width: [1, 8], size: [4, 24], textSize: [10, 20] }[whatIs(property)];
+      control('rangeFrom').value = String(min);
+      control('rangeTo').value = String(max);
+    }
+    renderClasses(property, v);
+  };
+  /** The classes of a driven value, each output editable. */
+  const renderClasses = (property, v) => {
+    const list = theme.querySelector('ol.classes');
+    const isColor = whatIs(property) === 'color';
+    const rows = [];
+    const row = (label, output, set) => {
+      const li = document.createElement('li');
+      const input = document.createElement('input');
+      input.type = isColor ? 'color' : 'number';
+      if (!isColor) input.step = 'any';
+      input.value = String(output);
+      input.setAttribute('aria-label', t.classValue(label));
+      input.addEventListener('change', () => {
+        const next = set(isColor ? input.value.toLowerCase() : Number(input.value));
+        change(withValue(doc, kind(), property, next));
+      });
+      const text = document.createElement('span');
+      text.textContent = label;
+      li.append(input, text);
+      rows.push(li);
+    };
+    if (v && v.categories) {
+      v.categories.forEach((c, i) => row(c.label ?? String(c.equals), c.value, (x) => {
+        const n = structuredClone(v);
+        n.categories[i].value = x;
+        return n;
+      }));
+      row(t.otherwise, v.otherwise, (x) => ({ ...structuredClone(v), otherwise: x }));
+    } else if (v && v.graduated) {
+      const labels = v.graduated.labels ?? classLabels(v.graduated.breaks, context.locale);
+      v.graduated.values.forEach((x, i) => row(labels[i], x, (y) => {
+        const n = structuredClone(v);
+        n.graduated.values[i] = y;
+        return n;
+      }));
+    } else if (v && v.scaled) {
+      v.scaled.to.forEach((x, i) => row(String(v.scaled.from[i]), x, (y) => {
+        const n = structuredClone(v);
+        n.scaled.to[i] = y;
+        return n;
+      }));
+    }
+    list.replaceChildren(...rows);
+    list.hidden = rows.length === 0;
+  };
+  /** Builds the driven value of the chosen property from the values of the attribute. */
+  let generation = 0;
+  const generate = async () => {
+    // Only the last request counts: the values of an attribute chosen before arrive late.
+    const mine = ++generation;
+    const property = control('themeProperty').value;
+    const mode = control('themeMode').value;
+    const k = kind();
+    const current = valueOf(doc, k, property);
+    const isColor = whatIs(property) === 'color';
+    if (mode === 'constant') {
+      change(withValue(doc, k, property, constantOf(current, isColor ? '#2f80ed' : 1)));
+      themeStatus.textContent = '';
+      return;
+    }
+    const attribute = control('themeField').value;
+    if (!attribute) {
+      themeStatus.textContent = t.chooseField;
+      return;
+    }
+    const classes = Math.max(2, Math.min(12, Number(control('classes').value) || 5));
+    const palette = control('palette').value;
+    const from = Number(control('rangeFrom').value);
+    const to = Number(control('rangeTo').value);
+    const outputs = (n) => (isColor ? paletteColors(palette, n) : rangeValues(from, to, n));
+    let values;
+    try {
+      values = await valuesOf(attribute, classes);
+    } catch (e) {
+      if (mine === generation) themeStatus.textContent = t.valuesFailed(e.message);
+      return;
+    }
+    if (mine !== generation) {
+      return;
+    }
+    let next;
+    let said;
+    if (mode === 'categories') {
+      const distinct = sortValues(values.values.map((x) => x.value));
+      if (distinct.length === 0) {
+        themeStatus.textContent = t.noValues;
+        return;
+      }
+      next = categorize(attribute, distinct, outputs(distinct.length), isColor ? OTHERWISE : constantOf(current, from));
+      said = t.generatedCategories(distinct.length, attribute) + (values.more ? ` ${t.moreValues(distinct.length)}` : '');
+    } else {
+      if (!values.numeric) {
+        themeStatus.textContent = t.needsNumber;
+        return;
+      }
+      if (!(values.max > values.min)) {
+        themeStatus.textContent = t.single;
+        return;
+      }
+      if (mode === 'scaled') {
+        const ends = isColor ? paletteColors(palette, 2) : [from, to];
+        next = scale(attribute, values.min, values.max, ends[0], ends[1]);
+        said = t.generatedScaled(attribute);
+      } else {
+        const breaks = control('method').value === 'quantile'
+          ? cleanBreaks(values.quantiles, values.min, values.max)
+          : equalBreaks(values.min, values.max, classes);
+        if (breaks.length === 0) {
+          themeStatus.textContent = t.single;
+          return;
+        }
+        next = graduate(attribute, breaks, outputs(breaks.length + 1), classLabels(breaks, context.locale));
+        said = t.generatedClasses(breaks.length + 1, attribute);
+      }
+    }
+    if (change(withValue(doc, k, property, next))) {
+      themeStatus.textContent = said;
+    }
+  };
+  for (const n of ['themeField', 'palette', 'classes', 'method', 'rangeFrom', 'rangeTo']) {
+    control(n).addEventListener('change', () => void generate());
+  }
+  control('themeProperty').addEventListener('change', () => {
+    themeStatus.textContent = '';
+    showTheme();
+  });
+  control('themeMode').addEventListener('change', () => {
+    showTheme(true);
+    void generate();
+  });
+  theme.querySelector('.generate').addEventListener('click', () => void generate());
+
+  // Changes ---------------------------------------------------------------------------------------
   const sld = dialog.querySelector('pre.sld');
   sld.textContent = t.translating;
-  const swatch = () => {
-    const paint = (shape, fill, fillOpacity, stroke, strokeWidth) => {
-      shape.setAttribute('fill', fill);
-      shape.setAttribute('fill-opacity', String(fillOpacity));
-      shape.setAttribute('stroke', stroke);
-      shape.setAttribute('stroke-width', String(strokeWidth));
-    };
-    const point = symbolFor(doc, 'point').style;
-    const line = symbolFor(doc, 'line').style;
-    const poly = symbolFor(doc, 'polygon').style;
-    const c = (v, fallback) => constantOf(v, fallback);
-    paint(dialog.querySelector('.swatch rect'), c(poly.fill, '#888888'), c(poly.fillOpacity, 1), c(poly.stroke, '#444444'), c(poly.strokeWidth, 1));
-    paint(dialog.querySelector('.swatch path'), 'none', 0, c(line.stroke, '#444444'), c(line.strokeWidth, 1));
-    dialog.querySelector('.swatch path').setAttribute('stroke-opacity', String(c(line.strokeOpacity, 1)));
-    const circle = dialog.querySelector('.swatch circle');
-    paint(circle, c(point.fill, '#888888'), c(point.fillOpacity, 1), c(point.stroke, '#444444'), c(point.strokeWidth, 1));
-    circle.setAttribute('r', String(Math.min(18, c(point.size, 8) / 2)));
-  };
   let pending = 0;
   // GP-309: a raster is published with the default raster style of GeoServer, no style of Geoportal.
   const raster = Boolean(options.raster) || dataset.loaded?.geometryType === 'Raster';
@@ -667,7 +1088,6 @@ export function openPublishDialog(context, root, dataset, options = {}) {
     if (raster) {
       return;
     }
-    swatch();
     const mine = ++pending;
     // The SLD stays until the new one arrives: the dialog must not change size under the pointer.
     sld.setAttribute('aria-busy', 'true');
@@ -687,6 +1107,24 @@ export function openPublishDialog(context, root, dataset, options = {}) {
     }
     sld.textContent = (await response.json()).sld;
   };
+  /** A new document from the panel: taken when valid, its problems shown otherwise. */
+  const change = (next, { redraw = true } = {}) => {
+    const problems = validate(next);
+    if (problems.length > 0) {
+      showProblems(problems);
+      return false;
+    }
+    doc = next;
+    if (redraw) {
+      render();
+    } else {
+      renderDocument();
+      renderSymbolTypes();
+      preview();
+    }
+    void translate();
+    return true;
+  };
   /** A document written or imported as JSON: taken when valid, its problems shown otherwise. */
   const take = (text) => {
     let parsed;
@@ -698,7 +1136,7 @@ export function openPublishDialog(context, root, dataset, options = {}) {
     }
     const problems = validate(migrate(parsed));
     if (problems.length > 0) {
-      docProblems.textContent = problems.slice(0, 5).map((p) => problemText(t, p)).join(' ');
+      showProblems(problems);
       return false;
     }
     doc = migrate(parsed);
@@ -708,22 +1146,40 @@ export function openPublishDialog(context, root, dataset, options = {}) {
     return true;
   };
   form.addEventListener('input', (event) => {
-    const field = event.target.name;
-    if (field === 'document') {
+    const key = event.target.name;
+    if (event.target.closest('fieldset.theme') || event.target.closest('.symbol-types')) {
+      return;
+    }
+    if (key === 'document') {
       take(area.value);
-    } else if (field !== 'type' && field !== 'layer' && field !== 'styleFile') {
-      // The fields stay as the person writes them; the document follows when they make a valid one.
-      const next = fromPanel(readPanel(doc.type), doc);
-      const problems = validate(next);
-      if (problems.length > 0) {
-        docProblems.textContent = problems.slice(0, 5).map((p) => problemText(t, p)).join(' ');
+    } else if (key === 'layer') {
+      void translate();
+    } else if (key === 'labelField' || key === 'labelColor' || key === 'labelSize') {
+      const value = (n) => form.querySelector(`[name=${n}]`).value.trim();
+      const labelField = value('labelField');
+      if (labelField && !doc.label) {
+        // A new label: the theme may now drive its colour and size too.
+        change(withLabel(doc, { field: labelField, color: value('labelColor'), size: Number(value('labelSize')) }), { redraw: false });
+        renderTheme();
         return;
       }
-      doc = next;
-      renderDocument();
-      void translate();
-    } else if (field === 'layer') {
-      void translate();
+      let next = withLabel(doc, { field: labelField, color: value('labelColor'), size: Number(value('labelSize')) });
+      if (next.label && doc.label && typeof doc.label.text === 'object' && !doc.label.text.field) {
+        // A template keeps its text: only the attribute of a label by attribute is in the panel.
+        next.label.text = doc.label.text;
+      }
+      change(next, { redraw: false });
+      if (!next.label) renderTheme();
+    } else if (key === 'shape') {
+      change(withConfig(doc, kind(), { ...symbolFor(doc, kind()).config, shape: event.target.value }), { redraw: false });
+    } else if (key && PROPERTIES[kind()]?.[key]) {
+      // The fields stay as the person writes them; the document follows when they make a valid one.
+      const input = event.target;
+      const v = input.type === 'number' ? Number(input.value) : input.value.trim().toLowerCase();
+      if (input.type === 'number' && input.value.trim() === '') {
+        return;
+      }
+      change(withValue(doc, kind(), key, v), { redraw: false });
     }
   });
   form.querySelector('[name=type]').addEventListener('change', (event) => {
@@ -731,6 +1187,10 @@ export function openPublishDialog(context, root, dataset, options = {}) {
     doc = retype(doc, event.target.value);
     render();
     void translate();
+  });
+  form.querySelector('[name=geometry]').addEventListener('change', (event) => {
+    chosenKind = event.target.value;
+    render(true);
   });
   dialog.querySelector('.export').addEventListener('click', () => {
     const link = document.createElement('a');
@@ -757,6 +1217,28 @@ export function openPublishDialog(context, root, dataset, options = {}) {
     file.value = '';
   });
   render();
+  if (!raster && dataset.id) {
+    // The attributes for the thematic styles and a sample of the features for the map, when the
+    // geodata database answers; the editor works without them.
+    readJson(`${UPLOADS}/attributes`)
+      .then((list) => {
+        attributes = list;
+        theme.dataset.attributes = String(list.length);
+        showTheme();
+      })
+      .catch(() => {
+        theme.dataset.attributes = '0';
+      });
+    readJson(`${UPLOADS}/sample?limit=1000`)
+      .then((collection) => {
+        features = collection;
+        preview();
+      })
+      .catch((e) => {
+        mapSvg.hidden = true;
+        mapNote.textContent = t.mapUnavailable(e.message);
+      });
+  }
   dialog.querySelector('.cancel').addEventListener('click', () => dialog.close());
   const submit = async () => {
     const button = form.querySelector('button.confirm');
@@ -797,6 +1279,14 @@ export function openPublishDialog(context, root, dataset, options = {}) {
   return dialog;
 }
 
+/** Whether the panel shows all of a document: everything but the text of a label that is not an attribute. */
+function panelShowsAll(doc) {
+  return !doc.label || (typeof doc.label.text === 'object' && typeof doc.label.text.field === 'string');
+}
+
+/** The colour of the features whose value no category names. */
+const OTHERWISE = '#bbbbbb';
+
 /** Defines <catalog-publications>, which the catalog places under the uploaded data. */
 export function definePublications(context) {
   if (customElements.get('catalog-publications')) {
@@ -813,7 +1303,7 @@ export function definePublications(context) {
       const tx = t();
       const root = this.shadowRoot ?? this.attachShadow({ mode: 'open' });
       root.innerHTML = `
-        <style>${STYLE}</style>
+        <style>${STYLE}${SYMBOLOGY_STYLE}</style>
         <section aria-labelledby="pub-title">
           <div><h2 id="pub-title">${tx.title}</h2><p class="muted small">${tx.subtitle}</p></div>
           <p class="muted note" aria-live="polite"></p>
@@ -873,6 +1363,23 @@ export function definePublications(context) {
       this.renderDetail();
     }
 
+    /**
+     * GP-006: the miniature of the style of Geoportal of a layer from its document, or, for a layer the
+     * map server styles (a raster), the GetLegendGraphic of its WMS; large, the GetLegendGraphic with
+     * the titles of the classes. Kept per publication, so that a redraw does not ask GeoServer again.
+     */
+    symbology(p, large) {
+      this.legends ??= new Map();
+      const key = `${p.name}|${p.publishedAt}|${large}`;
+      if (!this.legends.has(key)) {
+        const doc = p.styleSource && validate(migrate(p.styleSource)).length === 0 ? migrate(p.styleSource) : null;
+        this.legends.set(key, doc && !large
+          ? miniature(doc, { locale: context.locale })
+          : legendImage((path) => context.fetch(path), p.services.wms, p.name, { locale: context.locale, large }));
+      }
+      return this.legends.get(key);
+    }
+
     healthPill(p, tx) {
       const pill = document.createElement('span');
       pill.className = `pill health ${p.health.status}`;
@@ -888,6 +1395,11 @@ export function definePublications(context) {
       row.setAttribute('aria-selected', String(p.name === this.chosen?.name));
       row.innerHTML = '<td><b class="mono"></b></td><td></td><td></td>';
       row.querySelector('b').textContent = p.name;
+      // GP-006: what the layer looks like, without opening it.
+      const look = document.createElement('div');
+      look.className = 'look';
+      look.append(this.symbology(p, false));
+      row.children[0].append(look);
       row.children[1].textContent = p.datasetTitle;
       const badge = assignedBadge(context, this.mine, p.name);
       if (badge) {
@@ -924,10 +1436,12 @@ export function definePublications(context) {
       panel.setAttribute('aria-label', p.name);
       panel.innerHTML = `<div class="row-end"><button type="button" class="close">${tx.close}</button></div>
         <h3 class="mono"></h3><dl></dl>
+        <h4>${tx.legend}</h4><div class="legend-slot"></div>
         <h4>${tx.services}</h4><p class="muted small">${tx.servicesHint}</p><ul class="urls"></ul>
         <p class="muted small desktop" ${p.gateway ? '' : 'hidden'}>${tx.desktopHint}</p>
         <div class="editing-slot"></div><div class="actions"></div><div class="failure"></div>`;
       panel.querySelector('h3').textContent = p.name;
+      panel.querySelector('.legend-slot').append(this.symbology(p, true));
       // Kept while the same publication stays open, so that a health check does not ask for its surveyors again.
       if (this.editingBox?.dataset.layer !== p.name) {
         this.editingBox = editingSection(context, p, this.mine, (m) => this.say(m));

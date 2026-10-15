@@ -152,7 +152,7 @@ jobs:
         if: steps.scope.outputs.run == 'true'
         working-directory: extensions/ext-catalog-geodata
         run: mvn -B -ntp test -Pgeoserver,postgis -Dskip.npm=true
-      # GP-335, GP-308, GP-334, GP-936, GP-937, GP-118, GP-115, GP-009: the bench suites that need GeoServer (GEOPORTAL_TEST_GEOSERVER=1), on the
+      # GP-335, GP-308, GP-334, GP-936, GP-937, GP-118, GP-115, GP-009, GP-973, GP-006: the bench suites that need GeoServer (GEOPORTAL_TEST_GEOSERVER=1), on the
       # GeoServer and PostGIS of tests/geoserver/compose.yaml with the image built above. GP-983: the bench
       # holds ext-catalog-geodata next to the extensions of mosaikit-ext it requires (mosaikit-ext.json).
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
@@ -180,7 +180,7 @@ jobs:
           npx --yes playwright@1 install --with-deps chromium
           npx playwright test tests/composition.spec.ts tests/catalog-files.spec.ts tests/access-rules.spec.ts tests/data-rules.spec.ts \
             tests/geoserver.spec.ts tests/organization-events.spec.ts tests/editing.spec.ts tests/rasters.spec.ts \
-            tests/loading.spec.ts tests/publishing.spec.ts tests/style.spec.ts
+            tests/loading.spec.ts tests/publishing.spec.ts tests/style.spec.ts tests/symbology.spec.ts
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: failure()
         with:
