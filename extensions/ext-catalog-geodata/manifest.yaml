@@ -164,6 +164,16 @@ contributes:
     - id: dataset
       type: dataset
       element: catalog-shared-dataset
+  # GP-339: the launcher of the Geoportal apps on the home page of the console (MK-101): a tile for each
+  # of catalog, maps, dashboards and processes the person may open (web/launcher.js).
+  home.widget:
+    - id: geoportal-apps
+      title: Your apps
+      element: geoportal-launcher
+      size: wide
+      order: 1
+      i18n:
+        it: { title: Le tue app }
   # The app bar of the shell.
   rail.app:
     # Not /app/catalog, the file manager of mosaikit-ext, which the geodata join with MK-134 (GP-983).
