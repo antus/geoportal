@@ -152,14 +152,14 @@ export function miniature(doc, { limit = 8, locale = 'en' } = {}) {
 }
 
 /**
- * The GetLegendGraphic of a layer from the map server, on a transparent background (GP-006), fetched
- * with the access of the person and shown when it arrives.
+ * The GetLegendGraphic of a layer from the map server, on a transparent background (GP-006): an image
+ * of the origin of Geoportal (the gate or the data gateway), which the browser asks with the session of
+ * the person, as the content security policy of the shell wants (no blob or data images).
  *
- * @param fetcher the fetch of the shell (context.fetch), which carries the session and the organization
  * @param wms the address of the WMS of the layer, with or without a query
  * @param layer the name of the layer
  */
-export function legendImage(fetcher, wms, layer, { locale = 'en', large = false } = {}) {
+export function legendImage(wms, layer, { locale = 'en', large = false } = {}) {
   const t = texts(locale);
   const box = document.createElement('span');
   box.className = `symbology legend${large ? ' large' : ''}`;
@@ -173,20 +173,16 @@ export function legendImage(fetcher, wms, layer, { locale = 'en', large = false 
     width: '16', height: '16', legend_options: 'fontAntiAliasing:true;fontSize:10;dx:3;forceLabels:on',
   };
   for (const [k, v] of Object.entries(query)) url.searchParams.set(k, v);
-  box.dataset.src = url.pathname + url.search;
-  void (async () => {
-    try {
-      const answer = await fetcher(box.dataset.src);
-      if (!answer.ok || !(answer.headers.get('content-type') ?? '').startsWith('image/')) throw new Error(String(answer.status));
-      img.src = URL.createObjectURL(await answer.blob());
-      box.dataset.state = 'loaded';
-    } catch {
-      img.remove();
-      box.textContent = t.noLegend;
-      box.classList.add('muted');
-      box.dataset.state = 'failed';
-    }
-  })();
+  img.addEventListener('load', () => {
+    box.dataset.state = 'loaded';
+  });
+  img.addEventListener('error', () => {
+    img.remove();
+    box.textContent = t.noLegend;
+    box.classList.add('muted');
+    box.dataset.state = 'failed';
+  });
+  img.src = url.pathname + url.search;
   return box;
 }
 

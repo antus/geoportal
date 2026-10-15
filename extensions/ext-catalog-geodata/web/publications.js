@@ -1375,7 +1375,7 @@ export function definePublications(context) {
         const doc = p.styleSource && validate(migrate(p.styleSource)).length === 0 ? migrate(p.styleSource) : null;
         this.legends.set(key, doc && !large
           ? miniature(doc, { locale: context.locale })
-          : legendImage((path) => context.fetch(path), p.services.wms, p.name, { locale: context.locale, large }));
+          : legendImage(p.services.wms, p.name, { locale: context.locale, large }));
       }
       return this.legends.get(key);
     }
