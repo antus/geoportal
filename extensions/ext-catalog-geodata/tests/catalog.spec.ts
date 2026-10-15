@@ -29,3 +29,20 @@ test.describe('in Italian', () => {
     await expect(page).toHaveURL(/\/app\/geodata$/);
   });
 });
+
+test('issue #54 a person who cannot manage GeoServer opens the catalog without a refused request', async ({ page }) => {
+  const person = member(2);
+  const held = (await api(person, '/api/v1/shell/permissions')).body as string[];
+  expect(held).not.toContain('dev.geoportal.catalog:manage-geoserver');
+  const refused: string[] = [];
+  page.on('response', (response) => {
+    if (response.status() >= 400) {
+      refused.push(`${response.status()} ${new URL(response.url()).pathname}`);
+    }
+  });
+  await signIn(page, person);
+  await openApp(page, 'Catalog');
+  await expect(page.getByRole('heading', { name: /^(Catalog|Catalogo)$/ })).toBeVisible();
+  await page.waitForLoadState('networkidle');
+  expect(refused.filter((r) => r.includes('/api/v1/ext/catalog/'))).toEqual([]);
+});
