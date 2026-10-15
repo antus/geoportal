@@ -1,4 +1,5 @@
 {{- /* SPDX-FileCopyrightText: 2026 Massimo Antonini */ -}}
+{{- /* SPDX-License-Identifier: AGPL-3.0-or-later */}}
 {{- if .Values.loader.enabled }}
 {{- $name := include "geoportal.loader.name" . }}
 # The loader (ADR-0019): GDAL in a sidecar that loads the files uploaded to the catalog into PostGIS

@@ -1,4 +1,5 @@
 <!-- SPDX-FileCopyrightText: 2026 Massimo Antonini -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 # 0027. ext-catalog-geodata: its own id, API and schema, adopting the data of the catalog
 
 - Status: accepted

@@ -1,4 +1,5 @@
 <!-- SPDX-FileCopyrightText: 2026 Massimo Antonini -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <!-- GP-327 F01: roles of people read from read-only views (schema gs_sec) in the Mosaikit database. -->
 <jdbcroleservice>
   <id>f01-gp-roles</id>

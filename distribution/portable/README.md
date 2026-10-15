@@ -31,3 +31,10 @@ a larger one with `413`.
 | `data/` | the database and the generated passwords, created at the first start |
 | `extensions/` | the extensions of Geoportal, signed |
 | `bin/` | the kernel, the Java runtime, PostgreSQL and their licenses |
+
+## Licence
+
+Geoportal is free software under the GNU Affero General Public License, version 3 or later:
+`bin/licenses/Geoportal-AGPL-3.0.txt`, next to the MPL 2.0 of Mosaikit. Its source code is at
+<https://github.com/antus/geoportal>. Whoever runs a modified Geoportal for people over a network
+offers them the source of that version (section 13 of the AGPL).

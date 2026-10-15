@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
   SPDX-FileCopyrightText: 2026 Massimo Antonini
+  SPDX-FileCopyrightText: The Apache Software Foundation
+  SPDX-License-Identifier: AGPL-3.0-or-later AND Apache-2.0
+
+  Based on the default server.xml of Apache Tomcat (Apache-2.0).
 
   GP-327 F01: the server.xml of the GeoServer image (without its JNDI resource, which is off), plus
   ONE valve. GeoServer trusts the user header of its request header filter from whoever sends it,

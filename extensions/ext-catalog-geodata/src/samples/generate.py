@@ -1,4 +1,5 @@
 # SPDX-FileCopyrightText: 2026 Massimo Antonini
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Writes the sample datasets of the catalog and the fixtures of its loading tests.
 
 Every place, name and value is invented: the towns of Valverde, Monteluce, Borgo Alto and the others

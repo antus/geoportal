@@ -1,4 +1,5 @@
 # SPDX-FileCopyrightText: 2026 Massimo Antonini
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Checks the requirements of this repository, as the requirements test of Mosaikit does for its own.
 A requirement lives in the docs/requirements folder of the extension that implements it
 (extensions/<name>/docs/requirements/GP-nnn.md), or in docs/requirements when it spans several

@@ -1,4 +1,5 @@
 -- SPDX-FileCopyrightText: 2026 Massimo Antonini
+-- SPDX-License-Identifier: AGPL-3.0-or-later
 --
 -- GP-309: data rules on rasters and on external services. (V10 is the layer assignments of GP-036.)
 --

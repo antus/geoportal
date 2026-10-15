@@ -1,4 +1,5 @@
 // SPDX-FileCopyrightText: 2026 Massimo Antonini
+// SPDX-License-Identifier: AGPL-3.0-or-later
 package dev.geoportal.ext.catalog.geodata.load;
 
 /** A bounding box: west, south, east, north, in the units of its reference system (GP-321). */

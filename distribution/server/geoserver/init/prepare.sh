@@ -1,5 +1,6 @@
 #!/bin/sh
 # SPDX-FileCopyrightText: 2026 Massimo Antonini
+# SPDX-License-Identifier: AGPL-3.0-or-later
 #
 # Prepares GeoServer for Geoportal. Idempotent: runs at every `docker compose up`.
 #   - a GeoFence DENY rule at the bottom of the list, so that nothing is open unless a rule written

@@ -1,10 +1,15 @@
 # SPDX-FileCopyrightText: 2026 Massimo Antonini
+# SPDX-License-Identifier: AGPL-3.0-or-later
 apiVersion: v2
 name: geoportal
 description: Geoportal on Kubernetes, the Mosaikit kernel with the extensions of Geoportal and GeoServer.
 type: application
 version: 2.0.0-SNAPSHOT
 appVersion: "2.0.0-SNAPSHOT"
+sources:
+  - https://github.com/antus/geoportal
+annotations:
+  artifacthub.io/license: AGPL-3.0-or-later
 maintainers:
   - name: Massimo Antonini
 dependencies:

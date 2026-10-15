@@ -1,4 +1,5 @@
 # SPDX-FileCopyrightText: 2026 Massimo Antonini
+# SPDX-License-Identifier: AGPL-3.0-or-later
 #
 # GeoServer of Geoportal, with its extensions INSIDE the image, downloaded once at build time:
 # downloaded at start (INSTALL_EXTENSIONS) a corrupted zip once started GeoServer without GeoFence,

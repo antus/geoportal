@@ -1,4 +1,5 @@
 # SPDX-FileCopyrightText: 2026 Massimo Antonini
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Proof 2: nginx asks the proof stub extension whether the Mosaikit session may read the workspace.
 
 `auth_request` calls GET /api/v1/ext/proofstub/gateway-check with the session cookie and

@@ -1,4 +1,5 @@
 # SPDX-FileCopyrightText: 2026 Massimo Antonini
+# SPDX-License-Identifier: AGPL-3.0-or-later
 #
 # Builds and tests the whole solution from the root (mvn verify): every extension on the bench of
 # @mosaikit/testing, then the distributions, against the latest snapshot of Mosaikit (ADR-0035 of
@@ -48,6 +49,11 @@ jobs:
           python3 -m pip install --quiet pyyaml jsonschema
           python3 docs/requirements/check.py
           rm -rf .requirements
+      - name: Licences (REUSE)
+        # Every file states its copyright and licence, in a header or in REUSE.toml (CLAUDE.md).
+        run: |
+          python3 -m pip install --quiet reuse==6.2.0
+          python3 -m reuse lint
       - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4.9.1
         with:
           distribution: temurin

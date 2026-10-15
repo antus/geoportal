@@ -1,4 +1,5 @@
 // SPDX-FileCopyrightText: 2026 Massimo Antonini
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
  * Dashboards of Geoportal, a mock: the dashboards of the mockup of layout A, as cards. The texts follow the

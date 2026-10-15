@@ -1,4 +1,5 @@
 // SPDX-FileCopyrightText: 2026 Massimo Antonini
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
  * The services the catalog publishes on GeoServer (GP-114, GP-115, GP-118): the publishing dialog of a

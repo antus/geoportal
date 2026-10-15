@@ -104,3 +104,21 @@ Then open <http://localhost:8080> and sign in as `admin` with `GEOPORTAL_ADMIN_P
 
 The Mosaikit version comes from `mosaikit.version` in `distribution/pom.xml`, and from the parent
 of each extension.
+
+## Licence
+
+Geoportal is free software under the GNU Affero General Public License, version 3 or any later
+version (`AGPL-3.0-or-later`, [LICENSE](LICENSE)). Its source code is at
+<https://github.com/antus/geoportal>.
+
+It is built on [Mosaikit](https://github.com/mosaikit/mosaikit) and
+[mosaikit-ext](https://github.com/mosaikit/mosaikit-ext), which are under the Mozilla Public License
+2.0. The two combine: the MPL 2.0 lets its files be part of a larger work under the GNU GPL family
+(its section 3.3), and the files of Mosaikit stay under the MPL 2.0. The distributions carry both
+texts in `bin/licenses/`.
+
+Every file states its licence, in an SPDX header or in [REUSE.toml](REUSE.toml), and the CI checks
+it with `reuse lint` ([REUSE](https://reuse.software)). The exceptions: the sample datasets of the
+catalog and the fixtures of the loading tests are synthetic data under CC0-1.0, and two configuration
+files based on the ones of Apache Tomcat and of the nginx image keep their Apache-2.0 and
+BSD-2-Clause parts. The texts are in [LICENSES](LICENSES).

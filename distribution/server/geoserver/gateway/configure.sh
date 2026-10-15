@@ -1,5 +1,6 @@
 #!/bin/bash
 # SPDX-FileCopyrightText: 2026 Massimo Antonini
+# SPDX-License-Identifier: AGPL-3.0-or-later
 #
 # GeoServer behind the data gateway of Geoportal (GP-336, ADR-0016, ADR-0022), at every start, before
 # GeoServer starts; idempotent. Only when GEOPORTAL_GATEWAY_ADDRESS is set (the server distribution):

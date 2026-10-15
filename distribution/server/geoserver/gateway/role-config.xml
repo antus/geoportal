@@ -1,4 +1,5 @@
 <!-- SPDX-FileCopyrightText: 2026 Massimo Antonini -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <!-- GP-336, ADR-0016: the roles of people, read from the published views of Mosaikit (mk_published, MK-123)
      with the reader login, which may read those views and nothing else. Written by configure.sh. -->
 <jdbcroleservice>

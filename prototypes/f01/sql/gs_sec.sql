@@ -1,4 +1,5 @@
 -- SPDX-FileCopyrightText: 2026 Massimo Antonini
+-- SPDX-License-Identifier: AGPL-3.0-or-later
 --
 -- GP-327 F01: what GeoServer reads of Mosaikit, in the Mosaikit database, once the kernel has
 -- migrated it. Run as the owner of the database (here the superuser of the container).

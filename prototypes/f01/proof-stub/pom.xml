@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
   SPDX-FileCopyrightText: 2026 Massimo Antonini
+  SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -17,6 +18,13 @@
     <version>0.1.0</version>
     <name>Geoportal proof stub (GP-327, F01)</name>
     <description>PROOF STUB of the F01 proofs: the gateway go-ahead, personal keys, the AuthKey mapper and the REST role endpoints. Not part of the product.</description>
+    <licenses>
+        <license>
+            <name>AGPL-3.0-or-later</name>
+            <url>https://www.gnu.org/licenses/agpl-3.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
     <properties>
         <extension.package.name>proofstub</extension.package.name>
     </properties>

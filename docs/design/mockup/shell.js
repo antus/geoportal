@@ -1,4 +1,5 @@
 // SPDX-FileCopyrightText: 2026 Massimo Antonini
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 /* Geoportal mockup: the frame of Mosaikit (top band, sidebar, menus) with the Geoportal theme, the
    review bar with its index and notes, and the events. The generic pages and dialogs of the frame

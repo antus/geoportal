@@ -1,4 +1,5 @@
 <!-- SPDX-FileCopyrightText: 2026 Massimo Antonini -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 # Sample datasets
 
 `generate.py` writes the 24 sample datasets of the catalog (GP-936) into

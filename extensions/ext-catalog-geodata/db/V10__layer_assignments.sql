@@ -1,4 +1,5 @@
 -- SPDX-FileCopyrightText: 2026 Massimo Antonini
+-- SPDX-License-Identifier: AGPL-3.0-or-later
 --
 -- GP-036: the layers assigned to each surveyor. A surveyor writes the data of a published layer, through
 -- the catalog and through WFS-T of GeoServer, only when the layer is assigned to them and they hold the

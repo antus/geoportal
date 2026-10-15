@@ -1,4 +1,5 @@
 -- SPDX-FileCopyrightText: 2026 Massimo Antonini
+-- SPDX-License-Identifier: AGPL-3.0-or-later
 --
 -- Loading by the GDAL sidecar (ADR-0019, GP-937): the job of the loader while a dataset is loading,
 -- the table it writes before the catalog takes it over, its progress, and the layer of a file with

@@ -1,4 +1,5 @@
 <!-- SPDX-FileCopyrightText: 2026 Massimo Antonini -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 # Requirements
 
 One Markdown file per requirement, `GP-nnn.md`, with a YAML front matter and the description in the

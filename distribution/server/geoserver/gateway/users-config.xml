@@ -1,4 +1,5 @@
 <!-- SPDX-FileCopyrightText: 2026 Massimo Antonini -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <!-- GP-336: the people of Mosaikit for the AuthKey filter (no passwords: they never sign in to GeoServer),
      from the same views as the roles. Written by configure.sh. -->
 <jdbcusergroupservice>

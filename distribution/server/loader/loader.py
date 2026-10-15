@@ -1,4 +1,5 @@
 # SPDX-FileCopyrightText: 2026 Massimo Antonini
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 The loader of Geoportal (ADR-0019): GDAL in a sidecar loads the files uploaded to the catalog.
 

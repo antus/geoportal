@@ -69,8 +69,11 @@ embedded PostgreSQL. Test what you changed; the CI runs everything.
 - **Names.** Never name the employer, companies, customers or tenders in this repository, in
   commits, or in anything published. Geoportal is the product of its owner; write in the first
   person when a text needs an author.
-- **Licence.** No licence file and no `SPDX-License-Identifier` until the ownership is settled in
-  writing: files carry only `SPDX-FileCopyrightText: 2026 Massimo Antonini`.
+- **Licence.** Geoportal is `AGPL-3.0-or-later` (`LICENSE`, `LICENSES/`). Every file starts with
+  `SPDX-FileCopyrightText: 2026 Massimo Antonini` and `SPDX-License-Identifier: AGPL-3.0-or-later`
+  in its comment syntax; a file that cannot carry a comment is covered by `REUSE.toml`. Synthetic
+  sample data are `CC0-1.0`; third-party files keep their own licence, with its text in `LICENSES/`.
+  `reuse lint` must pass (the CI runs it).
 - **Commits** are signed off (`git commit -s`, DCO), small, pushed often. Never `git add -A` in a
   tree another session may share; never a bare `git stash`.
 - **Mosaikit is public.** When Geoportal needs something of the platform, it becomes a generic MK

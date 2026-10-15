@@ -1,4 +1,5 @@
 /* SPDX-FileCopyrightText: 2026 Massimo Antonini */
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
 /* Geoportal mockup: the frame of Mosaikit with the Geoportal theme, and the styles of the Geoportal pages. */
 /* Tokens: dark by default, light from the system or the appearance menu. */
 :root {

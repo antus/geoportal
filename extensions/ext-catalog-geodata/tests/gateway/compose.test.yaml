@@ -1,4 +1,5 @@
 # SPDX-FileCopyrightText: 2026 Massimo Antonini
+# SPDX-License-Identifier: AGPL-3.0-or-later
 #
 # GP-336: what the test of the data gateway (gateway.e2e.ts) changes in the server stack, over its
 # compose.yaml: people register without a mail server. For the tests only.

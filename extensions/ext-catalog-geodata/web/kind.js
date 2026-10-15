@@ -1,4 +1,5 @@
 // SPDX-FileCopyrightText: 2026 Massimo Antonini
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
  * GP-983, ADR-0028: geodata as a kind of file of the catalog of mosaikit-ext (EXT-105). The catalog

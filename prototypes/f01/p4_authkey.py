@@ -1,4 +1,5 @@
 # SPDX-FileCopyrightText: 2026 Massimo Antonini
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Proof 4: AuthKey with the web service mapper on an endpoint of the proof stub extension.
 
 A person creates a personal key in Mosaikit (POST /api/v1/ext/proofstub/keys). QGIS sends it as

@@ -1,4 +1,5 @@
 # SPDX-FileCopyrightText: 2026 Massimo Antonini
+# SPDX-License-Identifier: AGPL-3.0-or-later
 #
 # The data gateway of Geoportal (GP-336, ADR-0006, ADR-0016, ADR-0022). The nginx image fills it from the
 # environment at start:

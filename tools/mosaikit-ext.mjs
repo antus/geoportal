@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 // SPDX-FileCopyrightText: 2026 Massimo Antonini
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /**
  * The packages of the extensions of mosaikit-ext that Geoportal composes (ADR-0024, GP-983): until they
  * are published, built from the commit pinned in mosaikit-ext.json, once, into

@@ -1,4 +1,5 @@
 -- SPDX-FileCopyrightText: 2026 Massimo Antonini
+-- SPDX-License-Identifier: AGPL-3.0-or-later
 --
 -- Uploaded data (GP-936): a file uploaded to the catalog is a resource of the organization. The
 -- content is in the file service of Mosaikit, never here; this table keeps what the catalog adds:

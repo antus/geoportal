@@ -1,4 +1,5 @@
 <!-- SPDX-FileCopyrightText: 2026 Massimo Antonini -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 # F01 (GP-327): the platform proofs on the Mosaikit stack
 
 The October proofs (F0, in the legacy code base) showed that GeoServer can run without users of

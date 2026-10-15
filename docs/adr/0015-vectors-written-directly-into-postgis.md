@@ -1,4 +1,5 @@
 <!-- SPDX-FileCopyrightText: 2026 Massimo Antonini -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 # 0015. Vectors are written directly into PostGIS, not through the Importer
 
 - Status: accepted; the reader is decided by ADR-0019
