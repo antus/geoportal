@@ -1235,7 +1235,7 @@ export function openPublishDialog(context, root, dataset, options = {}) {
         preview();
       })
       .catch((e) => {
-        mapSvg.hidden = true;
+        mapSvg.style.display = 'none';
         mapNote.textContent = t.mapUnavailable(e.message);
       });
   }

@@ -327,15 +327,14 @@ public class UploadResource {
                 .orElseGet(() -> Failure.correct(404, "not-found", "The dataset has no attribute " + field + ".").response()));
     }
 
-    /** A sample of the features of the dataset in WGS84, for the preview map of the editor (level manage). */
+    /** A sample of the features of the dataset in WGS84 (GeoJSON), for the preview map of the editor (level manage). */
     @GET
     @Path("{id}/sample")
-    @Produces("application/geo+json")
     @Transactional
     public Response sample(@PathParam("id") UUID id,
             @QueryParam("limit") @jakarta.ws.rs.DefaultValue("1000") int limit) {
         return withTable(id, (c, schema, table) -> Response.ok(DatasetValues.sample(c, schema, table, limit),
-                "application/geo+json").build());
+                MediaType.APPLICATION_JSON).build());
     }
 
     private interface TableRead {
