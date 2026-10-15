@@ -22,7 +22,7 @@ mosaikit:
     signatures: required
     # Settings of the extensions of Geoportal (MK-129), environment variables of the kernel. Never a
     # password here: refer to a Secret with valueFrom.secretKeyRef.
-    dev.geoportal.catalog:
+    dev.geoportal.ext.catalog.geodata:
       settings:
         # The loader of this chart (loader.enabled), as the kernel reaches it: http://<release>-loader:8090.
         # The defaults fit "helm install geoportal"; with another release name set both, or the chart
@@ -62,7 +62,7 @@ geoserver:
 loader:
   # GDAL in a sidecar that loads the files uploaded to the catalog (ADR-0019), built from
   # geoportal-server/loader. Geoportal calls it at the setting geoportal.catalog.loader.url of the
-  # catalog, above (mosaikit.extensions.dev.geoportal.catalog.settings), which must name it.
+  # catalog, above (mosaikit.extensions.dev.geoportal.ext.catalog.geodata.settings), which must name it.
   enabled: true
   image:
     repository: registry.example.org/geoportal-loader
@@ -92,7 +92,7 @@ gateway:
   maxBody: ""
   clusterDomain: cluster.local
   # A secret with key `key`: the key (mks_...) of the service identity "gateway" of Geoportal, given the
-  # API catalog and the endpoint check-key; without it personal keys (QGIS) are refused.
+  # API catalog-geodata and the endpoint check-key; without it personal keys (QGIS) are refused.
   serviceKeySecret: ""
   reader:
     # The database of Geoportal and a secret with `username` and `password` of the login that reads its

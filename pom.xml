@@ -30,7 +30,7 @@
     </properties>
 
     <modules>
-        <module>extensions/catalog</module>
+        <module>extensions/ext-catalog-geodata</module>
         <module>extensions/maps</module>
         <module>extensions/dashboards</module>
         <module>extensions/processes</module>

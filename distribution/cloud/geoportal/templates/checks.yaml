@@ -6,9 +6,9 @@ name, or the loader turned off, stops here with what to set instead of a catalog
 nothing.
 */ -}}
 {{- $extensions := .Values.mosaikit.extensions | default dict -}}
-{{- $catalog := index $extensions "dev.geoportal.catalog" | default dict -}}
+{{- $catalog := index $extensions "dev.geoportal.ext.catalog.geodata" | default dict -}}
 {{- $settings := $catalog.settings | default dict -}}
-{{- $where := "mosaikit.extensions.dev.geoportal.catalog.settings" -}}
+{{- $where := "mosaikit.extensions.dev.geoportal.ext.catalog.geodata.settings" -}}
 {{- $url := index $settings "geoportal.catalog.loader.url" -}}
 {{- $source := index $settings "geoportal.catalog.loader.source-url" -}}
 {{- if .Values.loader.enabled -}}

@@ -9,8 +9,8 @@
     "node": ">=24"
   },
   "scripts": {
-    "predev": "mvn -q -B -pl extensions/catalog,extensions/maps,extensions/dashboards,extensions/processes,branding/theme package -DskipTests",
-    "dev": "mosaikit-bench --work .mosaikit-bench --set mosaikit.ui.theme=dev.geoportal.theme extensions/catalog extensions/maps extensions/dashboards extensions/processes branding/theme",
+    "predev": "mvn -q -B -pl extensions/ext-catalog-geodata,extensions/maps,extensions/dashboards,extensions/processes,branding/theme package -DskipTests",
+    "dev": "node tools/mosaikit-ext.mjs --bench -- --work .mosaikit-bench --set mosaikit.ui.theme=dev.geoportal.theme extensions/ext-catalog-geodata extensions/maps extensions/dashboards extensions/processes branding/theme",
     "build": "mvn -B install -DskipTests",
     "test": "mvn -B verify"
   },

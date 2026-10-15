@@ -12,7 +12,8 @@
 
       in target/dist at the root of the repository:
 
-        geoportal                      the installation: Mosaikit, the extensions, the Geoportal theme
+        geoportal                      the installation: Mosaikit, the extensions of Geoportal and those
+                                       of mosaikit-ext it composes (mosaikit-ext.json), the Geoportal theme
         geoportal-server               Docker Compose: PostGIS, GeoServer (GeoFence, Importer), Keycloak
         geoportal-cloud                Helm: the Mosaikit chart with GeoServer
         geoportal-portable             with -Pportable: archives that need nothing installed
@@ -42,13 +43,15 @@
         <!-- true: build on the Mosaikit snapshot of the local Maven repository as it is, without
              bringing it up to the published one (tools/MosaikitSnapshot.java). -->
         <mosaikit.snapshot.skip>false</mosaikit.snapshot.skip>
+        <!-- Where tools/mosaikit-ext.mjs puts the packages of mosaikit-ext (GP-983). -->
+        <mosaikit-ext.packages>${project.basedir}/../target/mosaikit-ext/packages</mosaikit-ext.packages>
     </properties>
 
     <dependencies>
         <!-- The packages of Geoportal: listed so that the reactor builds them first. -->
         <dependency>
             <groupId>dev.geoportal</groupId>
-            <artifactId>geoportal-catalog</artifactId>
+            <artifactId>ext-catalog-geodata</artifactId>
             <version>${project.version}</version>
             <type>pom</type>
         </dependency>
@@ -181,11 +184,20 @@
                                       todir="${installation}/config" overwrite="true"/>
                                 <copy file="${project.basedir}/install/README.md"
                                       todir="${installation}" overwrite="true"/>
+                                <!-- GP-983: the adoption of the schema of the old catalog, run by hand
+                                     before the first start of an installation that had it (README). -->
+                                <copy file="${project.basedir}/../extensions/ext-catalog-geodata/upgrade/adopt-catalog.sql"
+                                      todir="${installation}/upgrade" overwrite="true"/>
                                 <copy todir="${installation}/extensions" flatten="true">
                                     <fileset dir="${project.basedir}/..">
                                         <include name="extensions/*/target/*-${project.version}.zip"/>
                                         <include name="branding/*/target/*-${project.version}.zip"/>
                                     </fileset>
+                                </copy>
+                                <!-- The extensions of mosaikit-ext that Geoportal composes (ADR-0024,
+                                     GP-983), built from the pinned commit of mosaikit-ext.json. -->
+                                <copy todir="${installation}/extensions" flatten="true">
+                                    <fileset dir="${mosaikit-ext.packages}" includes="*.zip"/>
                                 </copy>
                                 <chmod file="${installation}/mosaikit" perm="755"/>
 
@@ -226,6 +238,9 @@
                                     <fileset dir="${project.basedir}/server" excludes="test/**"/>
                                 </copy>
                                 <copy file="${mosaikit.directory}/mosaikit-docker/postgres/init-keycloak.sh"
+                                      todir="${server}/postgres" overwrite="true"/>
+                                <!-- GP-983: run by the service adopt-catalog before Geoportal starts. -->
+                                <copy file="${project.basedir}/../extensions/ext-catalog-geodata/upgrade/adopt-catalog.sql"
                                       todir="${server}/postgres" overwrite="true"/>
                                 <copy file="${project.basedir}/server/env.example" tofile="${server}/.env"
                                       overwrite="false"/>
@@ -296,6 +311,22 @@
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>3.5.1</version>
                 <executions>
+                    <execution>
+                        <!-- The packages of the extensions of mosaikit-ext that the distributions bring
+                             next to those of Geoportal (GP-983): built once from the commit pinned in
+                             mosaikit-ext.json, then reused. -->
+                        <id>mosaikit-ext</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <executable>node</executable>
+                            <arguments>
+                                <argument>${project.basedir}/../tools/mosaikit-ext.mjs</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
                     <execution>
                         <id>mosaikit-snapshot</id>
                         <phase>initialize</phase>

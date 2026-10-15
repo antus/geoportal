@@ -104,7 +104,7 @@ jobs:
         run: |
           run=true
           if [ "$EVENT" = pull_request ] && \
-             ! git diff --name-only "$BASE" HEAD | grep -qE '^(extensions/catalog|distribution/server)/'; then
+             ! git diff --name-only "$BASE" HEAD | grep -qE '^(extensions/ext-catalog-geodata/|distribution/server/|tools/mosaikit-ext\.mjs|mosaikit-ext\.json)'; then
             run=false
           fi
           echo "run=$run" >> "$GITHUB_OUTPUT"
@@ -141,17 +141,18 @@ jobs:
           installation: 'true'
       - name: Tests of the catalog against GeoServer and PostGIS
         if: steps.scope.outputs.run == 'true'
-        working-directory: extensions/catalog
+        working-directory: extensions/ext-catalog-geodata
         run: mvn -B -ntp test -Pgeoserver,postgis -Dskip.npm=true
       # GP-335, GP-308, GP-334, GP-936, GP-937, GP-118, GP-115: the bench suites that need GeoServer (GEOPORTAL_TEST_GEOSERVER=1), on the
-      # GeoServer and PostGIS of tests/geoserver/compose.yaml with the image built above.
+      # GeoServer and PostGIS of tests/geoserver/compose.yaml with the image built above. GP-983: the bench
+      # holds ext-catalog-geodata next to the extensions of mosaikit-ext it requires (mosaikit-ext.json).
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         if: steps.scope.outputs.run == 'true'
         with:
           node-version: '24'
       - name: GeoServer and PostGIS of the bench
         if: steps.scope.outputs.run == 'true'
-        working-directory: extensions/catalog
+        working-directory: extensions/ext-catalog-geodata
         run: |
           F=tests/geoserver/compose.yaml
           docker compose -p geoportal-catalog-test -f $F up -d
@@ -162,23 +163,23 @@ jobs:
           docker compose -p geoportal-catalog-test -f $F logs geoserver-init | tail -2
       - name: Bench suites of the catalog against GeoServer
         if: steps.scope.outputs.run == 'true'
-        working-directory: extensions/catalog
+        working-directory: extensions/ext-catalog-geodata
         env:
           GEOPORTAL_TEST_GEOSERVER: '1'
         run: |
           mvn -B -ntp package -DskipTests
           npx --yes playwright@1 install --with-deps chromium
-          npx playwright test tests/access-rules.spec.ts tests/data-rules.spec.ts tests/geoserver.spec.ts \
-            tests/organization-events.spec.ts tests/editing.spec.ts tests/rasters.spec.ts \
+          npx playwright test tests/composition.spec.ts tests/access-rules.spec.ts tests/data-rules.spec.ts \
+            tests/geoserver.spec.ts tests/organization-events.spec.ts tests/editing.spec.ts tests/rasters.spec.ts \
             tests/loading.spec.ts tests/publishing.spec.ts
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: failure()
         with:
           name: geoserver-tests
           path: |
-            extensions/catalog/target/surefire-reports/
-            extensions/catalog/test-results/
-            extensions/catalog/.mosaikit-bench/installation.log
+            extensions/ext-catalog-geodata/target/surefire-reports/
+            extensions/ext-catalog-geodata/test-results/
+            extensions/ext-catalog-geodata/.mosaikit-bench/installation.log
           retention-days: 7
 
   gateway:
@@ -189,7 +190,7 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name != 'push' || github.ref == 'refs/heads/main'
     env:
-      COMPOSE_FILES: -p geoportal-f04-gp336 -f compose.yaml -f ../../../extensions/catalog/tests/gateway/compose.test.yaml
+      COMPOSE_FILES: -p geoportal-f04-gp336 -f compose.yaml -f ../../../extensions/ext-catalog-geodata/tests/gateway/compose.test.yaml
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -202,7 +203,7 @@ jobs:
         run: |
           run=true
           if [ "$EVENT" = pull_request ] && \
-             ! git diff --name-only "$BASE" HEAD | grep -qE '^(extensions/catalog|distribution/server|\.github/workflows)/'; then
+             ! git diff --name-only "$BASE" HEAD | grep -qE '^(extensions/ext-catalog-geodata/|distribution/|\.github/workflows/|tools/mosaikit-ext\.mjs|mosaikit-ext\.json)'; then
             run=false
           fi
           echo "run=$run" >> "$GITHUB_OUTPUT"
@@ -248,18 +249,18 @@ jobs:
         if: steps.scope.outputs.run == 'true'
         working-directory: target/dist/geoportal-server
         run: |
-          cp ../../../extensions/catalog/tests/gateway/test.env .env
+          cp ../../../extensions/ext-catalog-geodata/tests/gateway/test.env .env
           docker compose $COMPOSE_FILES build gateway geoportal loader
           docker compose $COMPOSE_FILES up -d --no-build
       - name: Playwright
         if: steps.scope.outputs.run == 'true'
-        working-directory: extensions/catalog
+        working-directory: extensions/ext-catalog-geodata
         run: |
           npm install --no-audit --no-fund
           npx playwright install --with-deps chromium
       - name: Tests of the gateway (GP-336)
         if: steps.scope.outputs.run == 'true'
-        working-directory: extensions/catalog
+        working-directory: extensions/ext-catalog-geodata
         run: npx playwright test -c playwright.gateway.config.ts
       - name: Mail of the server stack, with the mail catcher (profile mail)
         if: steps.scope.outputs.run == 'true'
@@ -275,7 +276,7 @@ jobs:
           name: gateway-tests
           path: |
             stack.log
-            extensions/catalog/test-results/
+            extensions/ext-catalog-geodata/test-results/
           retention-days: 7
       - name: Down
         if: always() && steps.scope.outputs.run == 'true'

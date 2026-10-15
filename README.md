@@ -23,15 +23,18 @@ Geoportal composes the common extensions of mosaikit-ext and adds the geospatial
 | `ext-catalog-connection-<ogc\|csw\|arcgis\|tiles\|stac>` | Geoportal | geospatial connectors |
 
 Folders and artifacts are named `ext-<extension>[-<sub>]`, manifest ids `dev.geoportal.ext.<extension>[.<sub>]`.
-The code has not moved yet: `extensions/` still holds the four extensions of today (catalog, maps,
-dashboards, processes), which will be split and replaced one at a time. The generic requirements
+The geodata of the catalog are `extensions/ext-catalog-geodata` (GP-983), next to the file manager and
+the connections of mosaikit-ext, which the builds, the benches and the distributions take from the
+commit pinned in `mosaikit-ext.json` (built by `tools/mosaikit-ext.mjs` until they are published). Maps,
+dashboards and processes are still the extensions of today, to be split and replaced one at a time. The generic requirements
 of catalog, dashboards and processes are now `EXT-nnn` in mosaikit-ext; their GP files say where
 they went (`moved-to`).
 
 ```
 pom.xml            aggregator: extensions, branding, distributions
 package.json       npm run dev: Mosaikit with every extension and the Geoportal theme
-extensions/        catalog, maps, dashboards, processes, each with the requirements it implements alone
+mosaikit-ext.json  the commit of mosaikit-ext whose extensions Geoportal composes (tools/mosaikit-ext.mjs)
+extensions/        ext-catalog-geodata, maps, dashboards, processes, each with the requirements it implements alone
 branding/          theme (the Geoportal colours)
 distribution/      installation, portable, server (Docker Compose), cloud (Helm)
 docs/requirements/ GP-nnn.md of the product as a whole, in the format of Mosaikit
@@ -53,7 +56,7 @@ You need Java 25, Maven 3.9, Node 24 and, for the server distribution, Docker.
 | build every extension and every distribution | `mvn install -DskipTests` |
 | also run the tests of every extension | `mvn verify` |
 | also build the portable archives | `mvn install -DskipTests -Pportable` |
-| work on one extension only | `cd extensions/catalog`, then `npm run dev` or `mvn verify` |
+| work on one extension only | `cd extensions/ext-catalog-geodata`, then `npm run dev` or `mvn verify` |
 
 Until its first release, Geoportal builds on the latest snapshot of Mosaikit (`0.1.0-SNAPSHOT`), which
 Maven keeps in the local repository (`~/.m2`) and never updates on its own. The build of the
@@ -68,7 +71,8 @@ The portable archives build on Linux, macOS and Windows. On Windows they need Gi
 build runs its bash (`%ProgramFiles%/Git/bin/bash.exe`, or `-Dportable.bash=<path>`), never the
 bash of WSL.
 
-`npm run dev` first packages the extensions (the Java code of the catalog needs it). It then starts
+`npm run dev` first packages the extensions (the Java code of the geodata needs it) and, once, those of
+mosaikit-ext of `mosaikit-ext.json` (git, Maven). It then starts
 an installation on an embedded PostgreSQL, with an organization whose people it prints in the
 console. A change to a frontend shows at once in the open page. Java code and migrations are read
 again at the next start.

@@ -119,7 +119,7 @@ services:
       GATEWAY_MOSAIKIT: geoportal:8080
       GATEWAY_GEOSERVER: geoserver:8080
       GATEWAY_GEOSERVER_NETWORK: ${GEOSERVER_NETWORK:-10.231.0}.0/24
-      # The key of the service identity "gateway" of Geoportal (API catalog, endpoint check-key), for
+      # The key of the service identity "gateway" of Geoportal (API catalog-geodata, endpoint check-key), for
       # the personal keys of QGIS: see README.md. Without it those keys are refused.
       GATEWAY_SERVICE_KEY: ${GATEWAY_SERVICE_KEY:-}
       GATEWAY_MAX_BODY: ${GEOPORTAL_MAX_UPLOAD:-1G}
@@ -160,6 +160,23 @@ services:
     networks: [loader]
     mem_limit: 1g
     restart: unless-stopped
+
+  adopt-catalog:
+    # GP-983: an installation that had the catalog of Geoportal in the schema ext_catalog gives its data
+    # to ext-catalog-geodata (schema ext_catalog_geodata) before Geoportal starts, and leaves ext_catalog
+    # to the file manager of mosaikit-ext; on a new or already adopted installation it changes nothing.
+    # It renames, never deletes: see postgres/adopt-catalog.sql.
+    image: postgis/postgis:18-3.6
+    command: ['psql', '-q', '-v', 'ON_ERROR_STOP=1', '-h', 'postgres', '-U', 'mosaikit', '-d', 'mosaikit',
+              '-f', '/adopt-catalog.sql']
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ./postgres/adopt-catalog.sql:/adopt-catalog.sql:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: 'no'
 
   geoportal:
     build:
@@ -212,6 +229,8 @@ services:
         condition: service_healthy
       keycloak:
         condition: service_healthy
+      adopt-catalog:
+        condition: service_completed_successfully
     restart: unless-stopped
 
   mailcatcher:
