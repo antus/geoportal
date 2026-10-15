@@ -124,7 +124,7 @@ test('GP-939 a WMS without CORS headers, with the proxy on, returns its tiles to
   await expect(tile).toBeVisible();
   // The image arrived and was decoded: a 512 × 256 PNG of the stub, through the address of Geoportal.
   await expect.poll(() => tile.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth)).toBe(512);
-  expect(await tile.getAttribute('src')).toMatch(/^\/api\/v1\/ext\/catalog\/services\/[0-9a-f-]{36}\/proxy\?/);
+  expect(await tile.getAttribute('src')).toMatch(/^\/api\/v1\/ext\/catalog-geodata\/services\/[0-9a-f-]{36}\/proxy\?/);
 
   const maps = server.received.filter((r) => param(r, 'request') === 'GetMap');
   expect(maps.length).toBeGreaterThan(0);
