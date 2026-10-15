@@ -1,4 +1,5 @@
 // SPDX-FileCopyrightText: 2026 Massimo Antonini
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
  * Data rules on external services (GP-309), in the details of a service: a person sees which layers are

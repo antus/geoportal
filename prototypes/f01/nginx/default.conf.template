@@ -1,4 +1,5 @@
 # SPDX-FileCopyrightText: 2026 Massimo Antonini
+# SPDX-License-Identifier: AGPL-3.0-or-later
 #
 # GP-327 F01: the gateway (ADR-0006). The nginx image fills ${SERVICE_BASIC} and ${ROLES_API_KEY}
 # from the environment at start.

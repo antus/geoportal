@@ -1,4 +1,5 @@
 # SPDX-FileCopyrightText: 2026 Massimo Antonini
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """GP-327 F01: brings a fresh stack (compose + Mosaikit with the catalog and the proof stub) to the state
 of the proofs.
 

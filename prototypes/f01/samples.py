@@ -1,4 +1,5 @@
 # SPDX-FileCopyrightText: 2026 Massimo Antonini
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """GP-327 F01: small, realistic vector files whose truth is known, for the Importer proof.
 
 Twelve monitoring stations in Valverde, an invented town (points) and six districts (polygons), with an integer, a text, a

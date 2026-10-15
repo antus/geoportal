@@ -1,4 +1,5 @@
 // SPDX-FileCopyrightText: 2026 Massimo Antonini
+// SPDX-License-Identifier: AGPL-3.0-or-later
 package dev.geoportal.ext.catalog.geodata.load;
 
 /** A column of a loaded table: its name in PostGIS and its type. */

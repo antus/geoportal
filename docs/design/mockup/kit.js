@@ -1,4 +1,5 @@
 // SPDX-FileCopyrightText: 2026 Massimo Antonini
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 /* Geoportal mockup: icons, small composition helpers, the drawn maps and the page frames.
    The frame helpers mirror the ones of the Mosaikit mockup, with the texts in Italian.

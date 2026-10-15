@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
   SPDX-FileCopyrightText: 2026 Massimo Antonini
+  SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -18,6 +19,13 @@
     <packaging>pom</packaging>
     <name>Geoportal Maps</name>
     <description>The maps of the organization (a mock, until the map viewer arrives).</description>
+    <licenses>
+        <license>
+            <name>AGPL-3.0-or-later</name>
+            <url>https://www.gnu.org/licenses/agpl-3.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
     <properties>
         <extension.package.name>maps</extension.package.name>
     </properties>

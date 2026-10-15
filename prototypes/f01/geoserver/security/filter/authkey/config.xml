@@ -1,4 +1,5 @@
 <!-- SPDX-FileCopyrightText: 2026 Massimo Antonini -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <!-- GP-327 F01: personal keys of Mosaikit for QGIS. The mapper asks the proof stub for the NAME only
      (through the internal door of the gateway, which adds the service account); the user and the
      roles come from the same views as for the gateway. (\S+): an unknown key stays anonymous. -->

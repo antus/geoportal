@@ -1,4 +1,5 @@
 <!-- SPDX-FileCopyrightText: 2026 Massimo Antonini -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 # 0021. GeoFence rules are generated and written as a whole for each organization
 
 - Status: accepted

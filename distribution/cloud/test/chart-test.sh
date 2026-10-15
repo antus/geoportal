@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Massimo Antonini
+# SPDX-License-Identifier: AGPL-3.0-or-later
 #
 # Tests of the Helm chart of Geoportal with helm template (GP-937): the settings of the catalog reach
 # the kernel as environment variables through the chart of Mosaikit (MK-129), and name the loader and

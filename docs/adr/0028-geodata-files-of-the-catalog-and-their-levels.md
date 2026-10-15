@@ -1,4 +1,5 @@
 <!-- SPDX-FileCopyrightText: 2026 Massimo Antonini -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 # 0028. Geodata are files of the catalog, and the levels on a file reach its dataset
 
 - Status: accepted

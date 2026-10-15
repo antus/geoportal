@@ -1,5 +1,6 @@
 #!/bin/bash
 # SPDX-FileCopyrightText: 2026 Massimo Antonini
+# SPDX-License-Identifier: AGPL-3.0-or-later
 #
 # Writes the database settings of GeoFence from the environment, turns on the data security of
 # GeoWebCache, puts GeoServer behind the data gateway when the installation has one

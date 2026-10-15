@@ -1,4 +1,5 @@
 // SPDX-FileCopyrightText: 2026 Massimo Antonini
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
  * External services of the catalog (GP-939): the OGC services of other servers registered by the

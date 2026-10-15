@@ -1,4 +1,5 @@
 -- SPDX-FileCopyrightText: 2026 Massimo Antonini
+-- SPDX-License-Identifier: AGPL-3.0-or-later
 --
 -- GP-335: the GeoFence rule set the catalog last wrote for the workspace of each organization, to tell
 -- the rules added by hand from its own, to write the set again only when it changed, and to report the

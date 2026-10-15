@@ -1,4 +1,5 @@
 # SPDX-FileCopyrightText: 2026 Massimo Antonini
+# SPDX-License-Identifier: AGPL-3.0-or-later
 #
 # GP-327, phase F01: the platform proofs on the Mosaikit stack. For the proofs only: the passwords
 # below are not secrets. See RESULT.md.

@@ -1,4 +1,5 @@
 // SPDX-FileCopyrightText: 2026 Massimo Antonini
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 /* Geoportal mockup: sample data. The body is the fictitious «Comune di Esempio»; places, people
    and services are invented. */

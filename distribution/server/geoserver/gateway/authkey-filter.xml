@@ -1,4 +1,5 @@
 <!-- SPDX-FileCopyrightText: 2026 Massimo Antonini -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <!-- GP-336, ADR-0007: personal access keys of Mosaikit for QGIS and other desktop clients (?authkey=).
      The mapper asks the catalog for the NAME of the person of a key, through the internal door of the
      gateway, which adds the key of its service identity; the catalog asks Mosaikit (services/check). An

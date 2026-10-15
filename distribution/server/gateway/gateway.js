@@ -1,4 +1,5 @@
 // SPDX-FileCopyrightText: 2026 Massimo Antonini
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
  * The go-ahead of the data gateway (GP-336, ADR-0022), for nginx's auth_request: may this session, or

@@ -1,4 +1,5 @@
 -- SPDX-FileCopyrightText: 2026 Massimo Antonini
+-- SPDX-License-Identifier: AGPL-3.0-or-later
 --
 -- GP-334: the layers and styles that the catalog publishes in the GeoServer workspace of each
 -- organization. These rows are the definition GeoServer is aligned to: a layer or style changed in

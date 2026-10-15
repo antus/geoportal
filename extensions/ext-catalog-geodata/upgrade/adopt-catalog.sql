@@ -1,4 +1,5 @@
 -- SPDX-FileCopyrightText: 2026 Massimo Antonini
+-- SPDX-License-Identifier: AGPL-3.0-or-later
 --
 -- GP-983: an installation that had the catalog of Geoportal as the extension dev.geoportal.catalog, with
 -- the schema ext_catalog, adopts its data as dev.geoportal.ext.catalog.geodata, with the schema

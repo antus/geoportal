@@ -1,4 +1,5 @@
 <!-- SPDX-FileCopyrightText: 2026 Massimo Antonini -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 # 0020. Publishing is a step of its own, and published layers are served through the catalog
 
 - Status: accepted

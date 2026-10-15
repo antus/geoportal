@@ -1,4 +1,5 @@
 {{- /* SPDX-FileCopyrightText: 2026 Massimo Antonini */ -}}
+{{- /* SPDX-License-Identifier: AGPL-3.0-or-later */}}
 {{- /*
 The settings of the catalog name the loader of this release and the kernel of this release (GP-937):
 values cannot be templates, so their defaults fit the release "geoportal", and a release with another

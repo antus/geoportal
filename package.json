@@ -3,6 +3,7 @@
   "version": "2.0.0-SNAPSHOT",
   "private": true,
   "description": "Geoportal: the extensions and the branding of Geoportal on Mosaikit, and its distributions.",
+  "license": "AGPL-3.0-or-later",
   "author": "Massimo Antonini",
   "type": "module",
   "engines": {

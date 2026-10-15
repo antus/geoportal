@@ -1,4 +1,5 @@
 <!-- SPDX-FileCopyrightText: 2026 Massimo Antonini -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 # 0023. The data of a layer are written by the surveyors assigned to it
 
 - Status: accepted

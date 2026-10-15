@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Massimo Antonini
+# SPDX-License-Identifier: AGPL-3.0-or-later
 #
 # The mail of the server stack: with the profile "mail", a person who registers gets the link that
 # confirms the address in the mail catcher, and can sign in once she opens it. Run in the folder of the

@@ -1,4 +1,5 @@
 <!-- SPDX-FileCopyrightText: 2026 Massimo Antonini -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 # 0019. Files are loaded by GDAL in a sidecar; built-in readers are the fallback
 
 - Status: accepted

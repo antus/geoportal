@@ -1,4 +1,5 @@
 # SPDX-FileCopyrightText: 2026 Massimo Antonini
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Proof 5: GeoServer reads the roles of a person from Mosaikit.
 
 First choice: the JDBC role service on read-only views (gs_sec.*) in the Mosaikit database, read by

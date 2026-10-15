@@ -1,4 +1,5 @@
 // SPDX-FileCopyrightText: 2026 Massimo Antonini
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
  * The data rules of a published layer (GP-308): what a person or a team sees of its data, by area, rows

@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
 <!-- SPDX-FileCopyrightText: 2026 Massimo Antonini -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <properties>
   <comment>GP-336: the people of Mosaikit, from its published views (MK-123), for the AuthKey filter: a
     username, no password, enabled unless suspended; no groups and no properties. Read-only.</comment>

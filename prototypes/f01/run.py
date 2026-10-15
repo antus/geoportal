@@ -1,4 +1,5 @@
 # SPDX-FileCopyrightText: 2026 Massimo Antonini
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """GP-327 F01: runs every proof and prints the table of verdicts.
 
     python run.py                 the stack is up and set up (stack.py up, setup.py)

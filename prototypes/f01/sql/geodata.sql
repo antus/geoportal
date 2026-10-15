@@ -1,4 +1,5 @@
 -- SPDX-FileCopyrightText: 2026 Massimo Antonini
+-- SPDX-License-Identifier: AGPL-3.0-or-later
 --
 -- GP-327 F01: test data in the database geodata, one schema per organization (= GeoServer
 -- workspace). 200 parcels in two districts of Valverde, with a reserved column (tax code of the

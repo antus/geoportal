@@ -1,4 +1,5 @@
 // SPDX-FileCopyrightText: 2026 Massimo Antonini
+// SPDX-License-Identifier: AGPL-3.0-or-later
 package dev.geoportal.ext.catalog.geodata.load;
 
 /** GP-983: what the readers of the loading say of the first bytes of a file, to recognize geodata. */

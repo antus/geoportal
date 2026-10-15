@@ -1,4 +1,5 @@
 <!-- SPDX-FileCopyrightText: 2026 Massimo Antonini -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <!-- GP-327 F01: the REST role service, the fallback, against the proof stub extension (dev.geoportal.proofstub) through the gateway. -->
 <authKeyRESTRoleService>
   <id>f01-gp-rest-roles</id>

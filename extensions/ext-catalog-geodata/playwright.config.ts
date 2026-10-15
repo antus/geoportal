@@ -1,4 +1,5 @@
 // SPDX-FileCopyrightText: 2026 Massimo Antonini
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { defineConfig, devices } from '@playwright/test';
 
 /** The tests of the sample on a Mosaikit installation started by the bench (tests/global-setup.ts). */

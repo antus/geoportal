@@ -1,4 +1,5 @@
 # SPDX-FileCopyrightText: 2026 Massimo Antonini
+# SPDX-License-Identifier: AGPL-3.0-or-later
 #
 # The loader of Geoportal (ADR-0019): GDAL in a sidecar, behind the catalog only. The official GDAL
 # image, pinned by digest: the flavour alpine-normal, the smallest official one with the LIBKML driver,
@@ -10,6 +11,9 @@ FROM ghcr.io/osgeo/gdal:alpine-normal-3.11.4@sha256:6c433bcde6c9eafb81a3e237da81
 RUN addgroup -S -g 10001 loader \
     && adduser -S -D -u 10001 -G loader -h /var/lib/loader loader \
     && install -d -o loader -g loader /var/lib/loader/jobs
+LABEL org.opencontainers.image.title="Geoportal loader" \
+      org.opencontainers.image.licenses="AGPL-3.0-or-later" \
+      org.opencontainers.image.source="https://github.com/antus/geoportal"
 COPY loader.py /opt/loader/loader.py
 USER loader
 ENV LOADER_PORT=8090 LOADER_WORKDIR=/var/lib/loader/jobs PYTHONUNBUFFERED=1

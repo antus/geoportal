@@ -1,4 +1,5 @@
 # SPDX-FileCopyrightText: 2026 Massimo Antonini
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Proof 6: the GeoServer Importer loads vector files into PostGIS with names, types and reference
 system right.
 

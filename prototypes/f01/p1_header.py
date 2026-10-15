@@ -1,4 +1,5 @@
 # SPDX-FileCopyrightText: 2026 Massimo Antonini
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Proof 1: GeoServer takes the person's name from a header only when the gateway sends it.
 
 The name travels in `sec-username` (GeoServer's request header filter). The proof sends that header

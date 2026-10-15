@@ -1,4 +1,5 @@
 -- SPDX-FileCopyrightText: 2026 Massimo Antonini
+-- SPDX-License-Identifier: AGPL-3.0-or-later
 --
 -- Loading of uploaded data (GP-937, GP-321, GP-324): what the loading of the current version produced,
 -- or why it did not. A vector is a table of the schema of the organization in the geodata database, a

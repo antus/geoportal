@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
   SPDX-FileCopyrightText: 2026 Massimo Antonini
+  SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -27,6 +28,13 @@
     <packaging>pom</packaging>
     <name>Geoportal distributions</name>
 
+    <licenses>
+        <license>
+            <name>AGPL-3.0-or-later</name>
+            <url>https://www.gnu.org/licenses/agpl-3.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <mosaikit.version>0.1.0-SNAPSHOT</mosaikit.version>
@@ -184,6 +192,13 @@
                                       todir="${installation}/config" overwrite="true"/>
                                 <copy file="${project.basedir}/install/README.md"
                                       todir="${installation}" overwrite="true"/>
+                                <!-- The licence of Geoportal (AGPL-3.0-or-later) next to the one of Mosaikit
+                                     (MPL-2.0), in bin/licenses: the portable archives add there those of
+                                     what they bundle, and the image and the server zip carry them too. -->
+                                <copy file="${project.basedir}/../LICENSE"
+                                      tofile="${installation}/bin/licenses/Geoportal-AGPL-3.0.txt"/>
+                                <copy file="${mosaikit.directory}/portable/LICENSE" failonerror="false"
+                                      tofile="${installation}/bin/licenses/Mosaikit-MPL-2.0.txt"/>
                                 <!-- GP-983: the adoption of the schema of the old catalog, run by hand
                                      before the first start of an installation that had it (README). -->
                                 <copy file="${project.basedir}/../extensions/ext-catalog-geodata/upgrade/adopt-catalog.sql"
@@ -261,6 +276,7 @@
                                 <copy todir="${cloud}/geoportal/charts/mosaikit">
                                     <fileset dir="${mosaikit.directory}/charts/mosaikit"/>
                                 </copy>
+                                <copy file="${project.basedir}/../LICENSE" tofile="${cloud}/geoportal/LICENSE"/>
                                 <zip destfile="${project.build.directory}/geoportal-cloud-${project.version}.zip">
                                     <zipfileset dir="${cloud}" prefix="geoportal-cloud"/>
                                 </zip>

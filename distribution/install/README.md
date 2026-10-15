@@ -62,3 +62,11 @@ a larger one with `413`. A proxy in front of Geoportal must accept bodies as lar
 | `extensions/` | the extensions of Geoportal and of mosaikit-ext, signed |
 | `upgrade/adopt-catalog.sql` | the adoption of the data of the old catalog (above) |
 | `bin/kernel/` | the kernel of Mosaikit, with the web interface |
+| `bin/licenses/` | the licences of Geoportal (AGPL-3.0-or-later) and of Mosaikit (MPL-2.0) |
+
+## Licence
+
+Geoportal is free software under the GNU Affero General Public License, version 3 or later:
+`bin/licenses/Geoportal-AGPL-3.0.txt`, next to the MPL 2.0 of Mosaikit. Its source code is at
+<https://github.com/antus/geoportal>. Whoever runs a modified Geoportal for people over a network
+offers them the source of that version (section 13 of the AGPL).

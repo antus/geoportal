@@ -3,6 +3,7 @@
   "version": "2.0.0-SNAPSHOT",
   "private": true,
   "description": "The colors of Geoportal, from the coloring \"Geoportal\" of the mockup of layout A.",
+  "license": "AGPL-3.0-or-later",
   "author": "Massimo Antonini",
   "type": "module",
   "engines": {

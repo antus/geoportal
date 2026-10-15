@@ -1,4 +1,5 @@
 <!-- SPDX-FileCopyrightText: 2026 Massimo Antonini -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 # 0016. GeoServer reads roles from Mosaikit and trusts only the gateway
 
 - Status: accepted

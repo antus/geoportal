@@ -1,4 +1,5 @@
 // SPDX-FileCopyrightText: 2026 Massimo Antonini
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 /* Geoportal mockup: the pages of the four extensions (catalog, maps, dashboards, processes), the
    public catalog, the geodata sections of the configuration, and their dialogs. Every screen is a

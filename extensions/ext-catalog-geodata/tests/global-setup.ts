@@ -1,4 +1,5 @@
 // SPDX-FileCopyrightText: 2026 Massimo Antonini
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { BENCH_PEOPLE, Bench, freePort, packagesIn } from '@mosaikit/testing';
 import { mosaikitExt } from './composition.js';
 import { MANAGER } from './people.js';

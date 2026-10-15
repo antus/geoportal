@@ -1,4 +1,5 @@
 // SPDX-FileCopyrightText: 2026 Massimo Antonini
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
  * The editing of the data of published layers (GP-036), in the details of a publication: who manages the

@@ -2,6 +2,7 @@
 <!DOCTYPE beans PUBLIC "-//SPRING//DTD BEAN//EN" "http://www.springframework.org/dtd/spring-beans.dtd">
 <!--
   SPDX-FileCopyrightText: 2026 Massimo Antonini
+  SPDX-License-Identifier: AGPL-3.0-or-later
 
   The authentication cache of GeoServer with short times. gs-main defines the bean
   authCacheLifecycleHandler in applicationContext.xml with 1000 entries, 300 s of idle time and

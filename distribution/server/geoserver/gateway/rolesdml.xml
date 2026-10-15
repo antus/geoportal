@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
 <!-- SPDX-FileCopyrightText: 2026 Massimo Antonini -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <properties>
   <comment>GP-336, ADR-0016: the roles of people read from the published views of Mosaikit (MK-123). The
     roles are the identifiers of organizations and teams as they are, which the GeoFence rules of the

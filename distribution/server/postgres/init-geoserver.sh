@@ -1,5 +1,6 @@
 #!/bin/sh
 # SPDX-FileCopyrightText: 2026 Massimo Antonini
+# SPDX-License-Identifier: AGPL-3.0-or-later
 #
 # First start of PostGIS: the user geoserver with its two databases, geoserver (the GeoFence rules,
 # schema geofence) and geodata (the data of Geoportal, with PostGIS; with PostGIS raster too, whose

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Massimo Antonini
+# SPDX-License-Identifier: AGPL-3.0-or-later
 #
 # Runs the build of the portable archives of Mosaikit (portable/build.sh of its portable-tools) on the
 # installation of Geoportal, from mvn install -Pportable. On Windows it runs in Git Bash, never in the

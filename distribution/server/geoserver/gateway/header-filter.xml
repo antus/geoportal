@@ -1,4 +1,5 @@
 <!-- SPDX-FileCopyrightText: 2026 Massimo Antonini -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <!-- GP-336, ADR-0016: the person the gateway names in sec-username, with the roles of the role service
      geoportal. Tomcat lets only the gateway in (RemoteAddrValve), and the gateway always overwrites the
      header. -->

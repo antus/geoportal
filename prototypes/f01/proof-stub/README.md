@@ -1,4 +1,5 @@
 <!-- SPDX-FileCopyrightText: 2026 Massimo Antonini -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 # Proof stub (GP-327, phase F01)
 
 **PROOF STUB.** A small Mosaikit extension, `dev.geoportal.proofstub`, with the endpoints that the

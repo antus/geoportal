@@ -1,4 +1,5 @@
 # SPDX-FileCopyrightText: 2026 Massimo Antonini
+# SPDX-License-Identifier: AGPL-3.0-or-later
 #
 # The geodata database of the server distribution (PostGIS with PostGIS raster), for the end-to-end
 # tests of the loading on the bench (tests/loading.spec.ts, GP-937). The passwords are for the tests only.

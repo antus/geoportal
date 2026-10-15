@@ -1,4 +1,5 @@
 // SPDX-FileCopyrightText: 2026 Massimo Antonini
+// SPDX-License-Identifier: AGPL-3.0-or-later
 package dev.geoportal.ext.catalog.geodata.geoserver;
 
 /** The schemas of the geodata database, one per organization, that the stores point to. */

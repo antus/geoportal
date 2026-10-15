@@ -1,4 +1,5 @@
 # SPDX-FileCopyrightText: 2026 Massimo Antonini
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """GP-327 F01: what the proofs share — addresses, people, HTTP, SQL, the rule set, the report.
 
 Standard library only. The stack is compose.yaml (project geoportal-f01) plus a Mosaikit

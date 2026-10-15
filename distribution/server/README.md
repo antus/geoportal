@@ -192,3 +192,10 @@ This setup is for development, demonstrations and small installations on one mac
 production put a reverse proxy with HTTPS in front of the gateway and Keycloak, run Keycloak with
 `start` instead of `start-dev`, keep `.env` out of version control and back up the volumes. On
 Kubernetes use `geoportal-cloud`.
+
+## Licence
+
+Geoportal is free software under the GNU Affero General Public License, version 3 or later:
+`../geoportal/bin/licenses/Geoportal-AGPL-3.0.txt`, also in the image of Geoportal, next to the MPL 2.0 of Mosaikit. Its source code is at
+<https://github.com/antus/geoportal>. Whoever runs a modified Geoportal for people over a network
+offers them the source of that version (section 13 of the AGPL).

@@ -1,4 +1,5 @@
 // SPDX-FileCopyrightText: 2026 Massimo Antonini
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { createServer, type IncomingHttpHeaders, type Server, type ServerResponse } from 'node:http';
 import { crc32, deflateSync } from 'node:zlib';
 

@@ -1,4 +1,5 @@
 // SPDX-FileCopyrightText: 2026 Massimo Antonini
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
  * Geodata of the catalog of Geoportal (GP-983): the datasets of the organization, searchable and filtered by theme, with

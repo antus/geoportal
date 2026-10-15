@@ -136,3 +136,10 @@ to zero and after a backup, run `upgrade/adopt-catalog.sql` of the installation 
 database of Geoportal, as its owner (`psql -v ON_ERROR_STOP=1 -f adopt-catalog.sql`), and move the
 values of `mosaikit.extensions.dev.geoportal.catalog` to `mosaikit.extensions.dev.geoportal.ext.catalog.geodata`.
 The script renames and never deletes; see the README of the installation.
+
+## Licence
+
+Geoportal is free software under the GNU Affero General Public License, version 3 or later:
+`geoportal/LICENSE` of the chart, and `bin/licenses/` in the image of Geoportal, next to the MPL 2.0 of Mosaikit. Its source code is at
+<https://github.com/antus/geoportal>. Whoever runs a modified Geoportal for people over a network
+offers them the source of that version (section 13 of the AGPL).

@@ -1,4 +1,5 @@
 # SPDX-FileCopyrightText: 2026 Massimo Antonini
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Proof 3: GeoFence rules written over REST, with Mosaikit people and roles as subjects.
 
 Writes the whole rule set as the catalog will (common.rule_set), re-reads what GeoFence kept, and

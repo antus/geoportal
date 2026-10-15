@@ -1,4 +1,5 @@
 <!-- SPDX-FileCopyrightText: 2026 Massimo Antonini -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 # 0024. Geoportal composes mosaikit-ext
 
 - Status: accepted
@@ -51,7 +52,8 @@ nothing geospatial.
 
 - 49 GP requirements moved to mosaikit-ext and 7 were split; the master plan cites the new ids.
 - The common extensions are public under MPL-2.0 from the start, while Geoportal stays without a
-  licence until its ownership is settled (CLAUDE.md).
+  licence until its ownership is settled (CLAUDE.md). Settled on 15 October 2026: Geoportal is
+  AGPL-3.0-or-later (README, Licence).
 - A Geoportal installation is a composition: Mosaikit, the extensions of mosaikit-ext it needs, and
   its own. The distributions will list both.
 - Monitoring and alerts, the assistant, BIM and the public catalog stay in Geoportal for now; some of
