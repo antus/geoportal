@@ -36,7 +36,7 @@ function spawn(command, args, options) {
 }
 
 function run(command, args, cwd) {
-  const result = spawn(command, args, { cwd, stdio: ['ignore', 'inherit', 'inherit'] });
+  const result = spawn(command, args, { cwd, stdio: ['ignore', 2, 2] }); // stdout holds only the directory
   if (result.status !== 0) {
     throw new Error(`${command} ${args.join(' ')} failed in ${cwd} (exit ${result.status ?? result.signal})`);
   }
@@ -73,6 +73,11 @@ export function packages() {
   mkdirSync(PACKAGES, { recursive: true });
   for (const extension of pin.extensions) {
     const folder = join(source, extension);
+    // The library of the contracts of the extension (MK-134), such as ext-catalog-api: installed into the
+    // local Maven repository, where the extension and those of Geoportal that implement them find it.
+    if (existsSync(join(folder, 'api', 'pom.xml'))) {
+      run('mvn', ['-B', '-q', '-ntp', '-f', 'api', 'install', '-DskipTests'], folder);
+    }
     process.stderr.write(`mosaikit-ext: building ${extension} (${local ?? pin.commit.slice(0, 12)})\n`);
     // Only the package: its tests run in the CI of mosaikit-ext.
     run('mvn', ['-B', '-q', '-ntp', 'package', '-DskipTests', '-Dskip.npm=true'], folder);

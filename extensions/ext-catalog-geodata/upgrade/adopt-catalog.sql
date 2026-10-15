@@ -28,10 +28,14 @@ declare
     new_id constant text := 'dev.geoportal.ext.catalog.geodata';
     target record;
     changed bigint;
+    catalog boolean := false;
 begin
-    if to_regclass('ext_catalog.flyway_schema_history') is null
-            or not exists (select 1 from ext_catalog.flyway_schema_history
-                           where version = '1' and description = 'create dataset' and success) then
+    -- Dynamic: a statement naming a table that does not exist fails when it is planned.
+    if to_regclass('ext_catalog.flyway_schema_history') is not null then
+        execute 'select exists (select 1 from ext_catalog.flyway_schema_history'
+            ' where version = ''1'' and description = ''create dataset'' and success)' into catalog;
+    end if;
+    if not catalog then
         raise notice 'GP-983: no catalog of Geoportal in the schema ext_catalog, nothing to adopt';
         return;
     end if;

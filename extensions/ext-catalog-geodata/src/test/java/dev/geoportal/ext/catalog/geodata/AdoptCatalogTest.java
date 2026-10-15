@@ -47,6 +47,14 @@ class AdoptCatalogTest {
     @BeforeAll
     @SuppressWarnings("resource")
     static void start() {
+        // GEOPORTAL_TEST_POSTGRES: a database of one's own (jdbc URL; user mosaikit, no password), instead of Docker.
+        String given = System.getenv("GEOPORTAL_TEST_POSTGRES");
+        if (given != null && !given.isBlank()) {
+            source = new PGSimpleDataSource();
+            source.setURL(given);
+            source.setUser("mosaikit");
+            return;
+        }
         postgres = new GenericContainer<>(DockerImageName.parse("postgis/postgis:18-3.6"))
                 .withEnv("POSTGRES_USER", "mosaikit")
                 .withEnv("POSTGRES_PASSWORD", "gp983-test")

@@ -24,7 +24,10 @@ export function mosaikitExt(): string[] {
     execFileSync(process.execPath, [join(ROOT, 'tools', 'mosaikit-ext.mjs')], {
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'inherit'],
-    }).trim();
+    })
+      .trim()
+      .split(/\r?\n/)
+      .at(-1)!;
   const found = packagesIn(directory);
   if (found.length === 0) {
     throw new Error(`No package of mosaikit-ext in ${directory}`);
