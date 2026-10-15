@@ -8,7 +8,11 @@ import static dev.geoportal.ext.catalog.geodata.upload.UploadedDatasets.ref;
 
 import dev.geoportal.ext.catalog.geodata.access.AccessRules;
 import dev.geoportal.ext.catalog.geodata.editing.LayerEditing;
+import dev.geoportal.ext.catalog.geodata.geoserver.Failure;
+import dev.geoportal.ext.catalog.geodata.load.DatasetValues;
+import dev.geoportal.ext.catalog.geodata.load.Geodata;
 import dev.mosaikit.kernel.api.audit.AuditLog;
+import dev.mosaikit.kernel.api.context.CurrentOrganization;
 import dev.mosaikit.kernel.api.files.FileContent;
 import dev.mosaikit.kernel.api.files.FileStorage;
 import dev.mosaikit.kernel.api.permission.AccessDeniedException;
@@ -83,6 +87,11 @@ public class UploadResource {
     /** GP-983: the content of the datasets made from files of the catalog. */
     @jakarta.inject.Inject
     CatalogContent catalog;
+    /** GP-973: the geodata database, where the style editor reads attributes, values and a sample. */
+    @jakarta.inject.Inject
+    Geodata geodata;
+    @jakarta.inject.Inject
+    CurrentOrganization organization;
 
     public UploadResource(UploadedDatasets datasets, UploadedDataRepository uploads, Samples samples,
             FileStorage files, Sharing sharing, Permissions permissions, AuditLog audit, AccessRules access,
@@ -292,6 +301,76 @@ public class UploadResource {
                 .header("Content-Disposition", "attachment; filename*=UTF-8''"
                         + URLEncoder.encode(data.fileName(), StandardCharsets.UTF_8).replace("+", "%20"))
                 .build();
+    }
+
+    // What the style editor reads of the data (GP-973) -------------------------------------------
+
+    /** The attributes of a loaded vector dataset, for the thematic styles of the editor (level manage). */
+    @GET
+    @Path("{id}/attributes")
+    @Transactional
+    public Response attributes(@PathParam("id") UUID id) {
+        return withTable(id, (c, schema, table) -> Response.ok(DatasetValues.attributes(c, schema, table)).build());
+    }
+
+    /**
+     * The distinct values of an attribute with how many features have each, and for a number its range
+     * and the quantiles that split it into {@code classes} classes (level manage).
+     */
+    @GET
+    @Path("{id}/attributes/{field}/values")
+    @Transactional
+    public Response values(@PathParam("id") UUID id, @PathParam("field") String field,
+            @QueryParam("classes") @jakarta.ws.rs.DefaultValue("5") int classes) {
+        return withTable(id, (c, schema, table) -> DatasetValues.values(c, schema, table, field, classes)
+                .map(v -> Response.ok(v).build())
+                .orElseGet(() -> Failure.correct(404, "not-found", "The dataset has no attribute " + field + ".").response()));
+    }
+
+    /** A sample of the features of the dataset in WGS84 (GeoJSON), for the preview map of the editor (level manage). */
+    @GET
+    @Path("{id}/sample")
+    @Transactional
+    public Response sample(@PathParam("id") UUID id,
+            @QueryParam("limit") @jakarta.ws.rs.DefaultValue("1000") int limit) {
+        return withTable(id, (c, schema, table) -> Response.ok(DatasetValues.sample(c, schema, table, limit),
+                MediaType.APPLICATION_JSON).build());
+    }
+
+    private interface TableRead {
+        Response read(java.sql.Connection connection, String schema, String table) throws java.sql.SQLException;
+    }
+
+    /** Reads the table of a loaded vector dataset the person manages, with the geodata database. */
+    private Response withTable(UUID id, TableRead read) {
+        sharing.require(ref(id), "manage");
+        UploadedData data = find(id);
+        if (data.tableName() == null || RasterPublishing.raster(data)) {
+            return Failure.correct(409, "not-loaded", "The dataset is not loaded as a table of features.").response();
+        }
+        java.util.Optional<java.sql.Connection> opened;
+        try {
+            opened = geodata.connect();
+        } catch (Geodata.Unavailable e) {
+            return Failure.correct(503, "geodata-unreachable", e.getMessage()).response();
+        }
+        if (opened.isEmpty()) {
+            return Failure.correct(409, "credential-missing", "The organization has no credential «" + Geodata.CREDENTIAL
+                    + "» for the geodata database.").response();
+        }
+        try (java.sql.Connection c = opened.get()) {
+            c.setReadOnly(true);
+            // schema.table as the loading recorded it.
+            String qualified = data.tableName();
+            int dot = qualified.lastIndexOf('.');
+            String schema = dot > 0 ? qualified.substring(0, dot) : Geodata.schema(organization.require());
+            Response answer = read.read(c, schema, qualified.substring(dot + 1));
+            c.rollback();
+            return answer;
+        } catch (java.sql.SQLException e) {
+            LOG.warnf("The table of %s cannot be read for the style editor: %s", data.technicalName(), e.getMessage());
+            return Failure.correct(503, "geodata-unreachable", "The geodata database failed: " + e.getSQLState()).response();
+        }
     }
 
     /** Deletes the dataset with its file and its grants (level manage). */

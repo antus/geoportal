@@ -24,7 +24,7 @@ const TEMPLATE = /^([^{}]|\{[A-Za-z_][A-Za-z0-9_]{0,62}\})*$/;
 const NUMBERS = { opacity: [0, 1], width: [0, 64], size: [1, 64], textSize: [6, 72] };
 
 /** The properties of the style block of each type, and what each one is. */
-const STYLE = {
+export const STYLE = {
   point: { fill: 'color', fillOpacity: 'opacity', stroke: 'color', strokeWidth: 'width', size: 'size' },
   line: { stroke: 'color', strokeOpacity: 'opacity', strokeWidth: 'width' },
   polygon: { fill: 'color', fillOpacity: 'opacity', stroke: 'color', strokeWidth: 'width' },
@@ -541,8 +541,8 @@ export function toMapLibre(doc, options) {
   return { layers, images: [...images] };
 }
 
-/** The vertices of each shape, in a square from -1 to 1, y down. */
-function outline(shape) {
+/** The vertices of each shape, in a square from -1 to 1, y down; null for the circle. */
+export function shapeOutline(shape) {
   const polar = (n, r, turn = 0) => Array.from({ length: n }, (_, i) => {
     const a = -Math.PI / 2 + turn + (i * 2 * Math.PI) / n;
     return [Math.cos(a) * r(i), Math.sin(a) * r(i)];
@@ -565,7 +565,7 @@ function outline(shape) {
 export function shapeImage(shape) {
   const size = SHAPE_PIXELS + 2 * SHAPE_BUFFER;
   const data = new Uint8ClampedArray(size * size * 4);
-  const polygon = outline(shape);
+  const polygon = shapeOutline(shape);
   const half = SHAPE_PIXELS / 2;
   for (let py = 0; py < size; py++) {
     for (let px = 0; px < size; px++) {

@@ -99,6 +99,7 @@ name the extension, such as `mosaikit.quotas.limits."dev.geoportal.catalog/data-
 | `web/uploads.js` | The uploaded data of the page: upload dialog, details, rename, replace, download, share, delete |
 | `web/publications.js` | The services published on GeoServer (GP-114, GP-118): publishing dialog, services with their health, republish, repoint, unpublish, reconciliation |
 | `web/style-grammar.js`, `src/main/java/dev/geoportal/ext/catalog/geodata/style/` | The style grammar `geoportal/style/v1` (GP-009): checks, change of type, editor panel, SLD and MapLibre |
+| `web/style-themes.js`, `web/symbology.js`, `load/DatasetValues.java` | Symbol types, styles per geometry, thematic styles and palettes, the preview map of the editor (GP-973); the symbology of the layer cards (GP-006) |
 | `web/data-rules.js` | The data rules of a published layer (GP-308): list, dialog with subject, area drawn on the map or WKT, row filter, hidden columns |
 | `web/service-rules.js`, `ServiceRules`, `ServiceRuleResource` | Data rules on external services (GP-309): the layer unavailable to the subject, and why |
 | `upload/RasterPublishing.java` | Rasters published as coverages of their COG (GP-309) |
@@ -475,7 +476,8 @@ data (categories, graduated, scaled) and label templates.
   *Documento di stile (JSON)*, where it can be edited, and **Esporta JSON** / **Importa JSON…** save it as
   a file and apply a file to another layer. A document with values the panel does not show is edited as
   JSON, and the editor says so. `web/style-grammar.js` holds the checks, the change of type, the panel
-  and the MapLibre adapter that GeoLibre will use (GP-340); it has no dependency.
+  and the MapLibre adapter that GeoLibre will use (GP-340); it has no dependency. Symbol types, a style
+  per geometry and thematic styles are the editor of GP-973, below.
 - **The catalog** checks a style when it is saved (`400 invalid-style`, with the JSON pointer of each
   problem), keeps the document, gives it back as `styleSource`, and translates it into SLD
   (`style/StyleDocument`, `style/SldStyle`): classes become rules with their legend titles, scaled values
@@ -489,6 +491,52 @@ The fixtures of `src/test/resources/style` are read by `StyleGrammarTest` (Java,
 Schema) and `tests/style.test.ts` (the browser module, `node --test`, run by `npm test` before the
 bench), so that the two implementations cannot drift; `StyleMigrationTest` (tag `postgis`) runs the
 migration, and `tests/style.spec.ts` the editor on GeoServer.
+
+### Symbol types, thematic styles, the preview (GP-973)
+
+The editor writes only what the grammar already says; nothing of it is a format of its own.
+
+- **Symbol types.** Under the type, a menu of the symbols of the edited geometry, each drawn as it will
+  look: for points the six shapes of the grammar (*Cerchio*, *Quadrato*, *Triangolo*, *Stella*, *Croce*,
+  *X*), for lines *Linea continua*, *Linea tratteggiata*, *Linea a punti* (`config.dash`), for polygons
+  *Poligono pieno* and *Solo contorno* (`fillOpacity` 0). These are what both MapLibre and the SLD of
+  GeoServer draw; icons, extrusions and 3D models wait for the maps of GP-340 and a grammar that says them.
+- **A style per geometry.** With *Tutte le geometrie* (a `mixed` document) **Geometria da modificare**
+  chooses *Punti*, *Linee* or *Poligoni*, and the panel edits the symbol of that geometry only.
+- **Thematic styles.** **Stile tematico** binds any property of the edited geometry (colours, opacities,
+  widths, the size of points, and the colour and size of the label) to an attribute of the dataset:
+  *Per categoria* makes one class per distinct value (up to 100, the others take *Altri valori*),
+  *Per classi di valori* splits a number into classes of equal intervals or quantiles, *Proporzionali al
+  valore* scales it between two values. Colours come from a palette (`PALETTES` of `web/style-themes.js`:
+  categorical ones repeat, sequential and diverging ones are interpolated), numbers from a range; the
+  classes are listed with their outputs, each editable. They become `categories`, `graduated` (with the
+  labels of the classes) and `scaled` values; the panel shows a bound field disabled, *dal dato «campo»*.
+- **The preview** shows the symbol of each geometry, and a **map** of up to 1000 features of the dataset
+  in WGS84 (Web Mercator, SVG) drawn with the style, each feature with the values its attributes give
+  (`evaluate`, as MapLibre and the SLD draw them). Every change of the panel, the menu, the theme or the
+  JSON redraws both, and the SLD.
+
+The values come from the geodata database through the uploads API (level `manage`, a loaded vector):
+
+| Call | Answers |
+|---|---|
+| `GET /uploads/{id}/attributes` | the attributes of the table: `name`, `type`, `numeric` |
+| `GET /uploads/{id}/attributes/{field}/values?classes=n` | `values` (each `value` with its `count`, the most frequent first, at most 100), `more`, `features`; for a number `min`, `max` and the `quantiles` that split it into `n` classes |
+| `GET /uploads/{id}/sample?limit=n` | a GeoJSON FeatureCollection of the first `n` features (at most 2000) in WGS84, with their attributes |
+
+`tests/symbology.test.ts` (`node --test`) proves the functions of `web/style-themes.js`,
+`DatasetValuesTest` (tag `postgis`) the queries, and `tests/symbology.spec.ts` the editor and the cards
+on GeoServer.
+
+### The symbology of the layer cards (GP-006)
+
+Each row of **Servizi pubblicati** shows what the layer looks like (`miniature` of `web/symbology.js`,
+from `sampleOf` of `web/style-themes.js`): for a style of Geoportal whose colour is graduated, a strip
+with the colours of its classes in order; categorized, a chip per category colour, eight at most and how
+many more; otherwise a sample of the symbol of each geometry. For a layer the map server styles (a
+raster, without a style of Geoportal) the row shows the **GetLegendGraphic** of its WMS, through the
+gate and with the access of the person, on a transparent background. The detail of every layer shows
+the GetLegendGraphic in full under **Legenda**, with the titles the SLD gives to its classes.
 
 API under `/api/v1/ext/catalog-geodata/publications`:
 
