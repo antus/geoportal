@@ -1,0 +1,107 @@
+# SPDX-FileCopyrightText: 2026 Massimo Antonini
+#
+# Values of Geoportal. Those under "mosaikit" go to the chart of Mosaikit, described in
+# charts/mosaikit/values.yaml.
+
+mosaikit:
+  image:
+    # The image of Geoportal, built from geoportal-server (docker build -f geoportal-server/Dockerfile .)
+    # and pushed to a registry of yours: the kernel with the extensions of Geoportal already built in.
+    repository: registry.example.org/geoportal
+    tag: "2.0.0-SNAPSHOT"
+  database:
+    # PostgreSQL 18 with PostGIS; the secret must contain `username` and `password`.
+    url: jdbc:postgresql://postgresql:5432/mosaikit
+    existingSecret: geoportal-database
+  files:
+    # The largest upload (issue #40), as in the other distributions of Geoportal: the chart of Mosaikit
+    # sets the largest file and the HTTP limit of the kernel to it, and the gateway below takes it too.
+    maxSize: 1G
+  extensions:
+    # The extensions in the image are signed by the build of Geoportal, whose key is in the image.
+    signatures: required
+    # Settings of the extensions of Geoportal (MK-129), environment variables of the kernel. Never a
+    # password here: refer to a Secret with valueFrom.secretKeyRef.
+    dev.geoportal.catalog:
+      settings:
+        # The loader of this chart (loader.enabled), as the kernel reaches it: http://<release>-loader:8090.
+        # The defaults fit "helm install geoportal"; with another release name set both, or the chart
+        # stops with a message. With the loader off, set this one to "": the catalog then loads with its
+        # own readers.
+        geoportal.catalog.loader.url: http://geoportal-loader:8090
+        # The kernel as the loader reaches it, to download the uploads through signed links:
+        # http://<release>-mosaikit (its service, port 80).
+        geoportal.catalog.loader.source-url: http://geoportal-mosaikit
+
+geoserver:
+  enabled: true
+  image:
+    # Built from geoportal-server/geoserver (GeoFence, Importer and AuthKey inside).
+    repository: registry.example.org/geoportal-geoserver
+    tag: "2.28.5"
+    pullPolicy: IfNotPresent
+  # Secret with key `password` for the administrator of GeoServer.
+  adminSecret: geoportal-geoserver-admin
+  geofence:
+    # The database of the GeoFence rules (schema geofence) and a secret with `username` and
+    # `password`.
+    host: postgresql
+    database: geoserver
+    existingSecret: geoportal-geoserver-database
+  persistence:
+    size: 10Gi
+    storageClass: ""
+  resources:
+    requests:
+      cpu: 250m
+      memory: 1Gi
+    limits:
+      memory: 2Gi
+  javaOptions: "-Xms256m -Xmx1g"
+
+loader:
+  # GDAL in a sidecar that loads the files uploaded to the catalog (ADR-0019), built from
+  # geoportal-server/loader. Geoportal calls it at the setting geoportal.catalog.loader.url of the
+  # catalog, above (mosaikit.extensions.dev.geoportal.catalog.settings), which must name it.
+  enabled: true
+  image:
+    repository: registry.example.org/geoportal-loader
+    tag: "2.0.0-SNAPSHOT"
+    pullPolicy: IfNotPresent
+  # Jobs at the same time.
+  workers: 2
+  # Room for the files being loaded and the COG being made.
+  workSize: 20Gi
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      memory: 1Gi
+
+gateway:
+  # The data gateway (GP-336, ADR-0022), built from geoportal-server/gateway: nginx in front of Geoportal
+  # and GeoServer on one origin. Point the Ingress of the installation at its service, port http.
+  enabled: true
+  image:
+    repository: registry.example.org/geoportal-gateway
+    tag: "1.27.5"
+    pullPolicy: IfNotPresent
+  replicas: 1
+  # The largest request body; empty for mosaikit.files.maxSize, the limit of the kernel.
+  maxBody: ""
+  clusterDomain: cluster.local
+  # A secret with key `key`: the key (mks_...) of the service identity "gateway" of Geoportal, given the
+  # API catalog and the endpoint check-key; without it personal keys (QGIS) are refused.
+  serviceKeySecret: ""
+  reader:
+    # The database of Geoportal and a secret with `username` and `password` of the login that reads its
+    # published views (mosaikit.database.published-views.login of the kernel), for the roles in GeoServer.
+    url: jdbc:postgresql://postgresql:5432/mosaikit
+    existingSecret: geoportal-published-views
+  resources:
+    requests:
+      cpu: 50m
+      memory: 32Mi
+    limits:
+      memory: 128Mi

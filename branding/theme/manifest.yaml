@@ -1,0 +1,22 @@
+# SPDX-FileCopyrightText: 2026 Massimo Antonini
+id: dev.geoportal.theme
+version: 2.0.0-SNAPSHOT
+name: Geoportal theme
+description: The name, the logo and the colors of Geoportal, from the coloring "Geoportal" of the mockup of layout A.
+kind: [theme]
+platform: '>=0.1 <1'
+theme:
+  title: Geoportal
+  radius: 8
+  light:
+    brand: '#444791'
+    focus: '#2b2c4a'
+  dark:
+    brand: '#7f85f5'
+  # As the theme of the installation it names the product and brings its logo, in place of those of
+  # Mosaikit: the compass rose of the mockup, deeper on light backgrounds, brighter on dark ones (the
+  # dark scheme and the bar of the shell).
+  product: Geoportal
+  logo:
+    light: web/logo.svg
+    dark: web/logo-dark.svg

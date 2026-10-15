@@ -1,0 +1,25 @@
+# SPDX-FileCopyrightText: 2026 Massimo Antonini
+id: dev.geoportal.dashboards
+version: 2.0.0-SNAPSHOT
+name: Dashboards
+description: The dashboards of the organization (a mock, until the dashboard designer arrives).
+kind: [app]
+platform: '>=0.1 <1'
+frontend:
+  entry: web/index.js
+  isolation: module
+  # What the frontend may do when the shell runs it isolated in an iframe.
+  bridge:
+    publishes: [dashboards.*]
+    services: []
+contributes:
+  # The app bar of the shell.
+  rail.app:
+    - id: dashboards
+      title: Dashboards
+      # The name in the language of the person (MK-053 of Mosaikit).
+      i18n:
+        it: { title: Cruscotti }
+      route: /app/dashboards
+      element: dashboards-app
+      icon: web/icon.svg

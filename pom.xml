@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SPDX-FileCopyrightText: 2026 Massimo Antonini
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <!--
+      Geoportal, the solution: the extensions and the branding of Geoportal on Mosaikit, and the
+      distributions that bring them with the geospatial stack.
+
+        mvn install            every extension, the branding and the distributions (target/dist)
+        mvn verify             also the tests of every extension and of the whole solution
+        mvn install -Pportable also the portable archives (downloads Java and PostgreSQL once)
+        npm run dev            Mosaikit with every extension and the Geoportal theme, until Ctrl+C
+
+      Only an aggregator: each extension keeps the parent of Mosaikit extensions and builds alone.
+    -->
+    <groupId>dev.geoportal</groupId>
+    <artifactId>geoportal</artifactId>
+    <version>2.0.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+    <name>Geoportal</name>
+
+    <properties>
+        <!-- The reactor builds this aggregator last: cleaning its target/ there would delete the
+             distributions just written in target/dist. The distribution module cleans them. -->
+        <maven.clean.skip>true</maven.clean.skip>
+    </properties>
+
+    <modules>
+        <module>extensions/catalog</module>
+        <module>extensions/maps</module>
+        <module>extensions/dashboards</module>
+        <module>extensions/processes</module>
+        <module>branding/theme</module>
+        <module>distribution</module>
+    </modules>
+</project>

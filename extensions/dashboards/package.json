@@ -1,0 +1,29 @@
+{
+  "name": "geoportal-dashboards",
+  "version": "2.0.0-SNAPSHOT",
+  "private": true,
+  "description": "The dashboards of the organization (a mock, until the dashboard designer arrives).",
+  "author": "Massimo Antonini",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "mosaikit-bench",
+    "pretest": "playwright install chromium",
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@mosaikit/testing": "https://github.com/mosaikit/mosaikit/releases/download/snapshot/mosaikit-testing-latest.tgz",
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^24.19.0",
+    "typescript": "~6.0.3"
+  },
+  "allowScripts": {
+    "@embedded-postgres/windows-x64": true,
+    "@embedded-postgres/linux-x64": true,
+    "@embedded-postgres/linux-arm64": true,
+    "@embedded-postgres/darwin-x64": true,
+    "@embedded-postgres/darwin-arm64": true
+  }
+}

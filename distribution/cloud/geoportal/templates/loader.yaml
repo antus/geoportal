@@ -1,0 +1,102 @@
+{{- /* SPDX-FileCopyrightText: 2026 Massimo Antonini */ -}}
+{{- if .Values.loader.enabled }}
+{{- $name := include "geoportal.loader.name" . }}
+# The loader (ADR-0019): GDAL in a sidecar that loads the files uploaded to the catalog into PostGIS
+# and converts rasters into COG. Inside the cluster only, and only Geoportal may call it.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "geoportal.labels" . | nindent 4 }}
+    app.kubernetes.io/name: loader
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: loader
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: loader
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: loader
+          image: "{{ .Values.loader.image.repository }}:{{ .Values.loader.image.tag }}"
+          imagePullPolicy: {{ .Values.loader.image.pullPolicy }}
+          env:
+            - name: LOADER_WORKERS
+              value: {{ .Values.loader.workers | quote }}
+            - name: LOADER_WORKDIR
+              value: /var/lib/loader/jobs
+          ports:
+            - name: http
+              containerPort: 8090
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          resources:
+            {{- toYaml .Values.loader.resources | nindent 12 }}
+          volumeMounts:
+            # The files being loaded, streamed from Geoportal: never in memory.
+            - name: jobs
+              mountPath: /var/lib/loader/jobs
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: jobs
+          emptyDir:
+            sizeLimit: {{ .Values.loader.workSize }}
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "geoportal.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: loader
+    app.kubernetes.io/instance: {{ .Release.Name }}
+  ports:
+    - name: http
+      port: 8090
+      targetPort: http
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "geoportal.labels" . | nindent 4 }}
+spec:
+  # Only the pods of Geoportal reach the loader.
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: loader
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: mosaikit
+              app.kubernetes.io/instance: {{ .Release.Name }}
+      ports:
+        - port: 8090
+{{- end }}

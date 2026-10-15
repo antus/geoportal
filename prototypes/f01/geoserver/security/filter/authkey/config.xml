@@ -1,0 +1,19 @@
+<!-- SPDX-FileCopyrightText: 2026 Massimo Antonini -->
+<!-- GP-327 F01: personal keys of Mosaikit for QGIS. The mapper asks the proof stub for the NAME only
+     (through the internal door of the gateway, which adds the service account); the user and the
+     roles come from the same views as for the gateway. (\S+): an unknown key stays anonymous. -->
+<authKeyAuthentication>
+  <id>f01-gp-authkey</id>
+  <name>authkey</name>
+  <className>org.geoserver.security.GeoServerAuthenticationKeyFilter</className>
+  <authKeyMapperName>webServiceMapper</authKeyMapperName>
+  <authKeyParamName>authkey</authKeyParamName>
+  <userGroupServiceName>gpusers</userGroupServiceName>
+  <mapperParameters>
+    <entry><string>webServiceUrl</string><string>http://gateway:8081/authkey?key={key}</string></entry>
+    <entry><string>searchUser</string><string>^\s*(\S+)\s*$</string></entry>
+    <entry><string>connectTimeout</string><string>5</string></entry>
+    <entry><string>readTimeout</string><string>10</string></entry>
+    <entry><string>cacheTtlSeconds</string><string>30</string></entry>
+  </mapperParameters>
+</authKeyAuthentication>

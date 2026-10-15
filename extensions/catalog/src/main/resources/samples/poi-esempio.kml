@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+<Document id="root_doc">
+<Schema name="poi_esempio" id="poi_esempio">
+	<SimpleField name="id" type="int"></SimpleField>
+	<SimpleField name="nome" type="string"></SimpleField>
+	<SimpleField name="citta" type="string"></SimpleField>
+	<SimpleField name="categoria" type="string"></SimpleField>
+	<SimpleField name="anno" type="int"></SimpleField>
+</Schema>
+<Folder><name>poi_esempio</name>
+  <Placemark>
+	<ExtendedData><SchemaData schemaUrl="#poi_esempio">
+		<SimpleData name="id">1</SimpleData>
+		<SimpleData name="nome">Torre Civica</SimpleData>
+		<SimpleData name="citta">Valverde</SimpleData>
+		<SimpleData name="categoria">monumento</SimpleData>
+		<SimpleData name="anno">92</SimpleData>
+	</SchemaData></ExtendedData>
+      <Point><coordinates>12.381245,42.105372</coordinates></Point>
+  </Placemark>
+  <Placemark>
+	<ExtendedData><SchemaData schemaUrl="#poi_esempio">
+		<SimpleData name="id">2</SimpleData>
+		<SimpleData name="nome">Cattedrale di Monteluce</SimpleData>
+		<SimpleData name="citta">Monteluce</SimpleData>
+		<SimpleData name="categoria">chiesa</SimpleData>
+		<SimpleData name="anno">1386</SimpleData>
+	</SchemaData></ExtendedData>
+      <Point><coordinates>10.874512,44.612338</coordinates></Point>
+  </Placemark>
+  <Placemark>
+	<ExtendedData><SchemaData schemaUrl="#poi_esempio">
+		<SimpleData name="id">3</SimpleData>
+		<SimpleData name="nome">Castello di Borgo Alto</SimpleData>
+		<SimpleData name="citta">Borgo Alto</SimpleData>
+		<SimpleData name="categoria">castello</SimpleData>
+		<SimpleData name="anno">1279</SimpleData>
+	</SchemaData></ExtendedData>
+      <Point><coordinates>15.103327,40.917644</coordinates></Point>
+  </Placemark>
+  <Placemark>
+	<ExtendedData><SchemaData schemaUrl="#poi_esempio">
+		<SimpleData name="id">4</SimpleData>
+		<SimpleData name="nome">Ponte dei Mulini</SimpleData>
+		<SimpleData name="citta">Pietrachiara</SimpleData>
+		<SimpleData name="categoria">ponte</SimpleData>
+		<SimpleData name="anno">1345</SimpleData>
+	</SchemaData></ExtendedData>
+      <Point><coordinates>11.948761,43.302185</coordinates></Point>
+  </Placemark>
+  <Placemark>
+	<ExtendedData><SchemaData schemaUrl="#poi_esempio">
+		<SimpleData name="id">5</SimpleData>
+		<SimpleData name="nome">Piazza del Mercato</SimpleData>
+		<SimpleData name="citta">Lagofondo</SimpleData>
+		<SimpleData name="categoria">piazza</SimpleData>
+		<SimpleData name="anno">1200</SimpleData>
+	</SchemaData></ExtendedData>
+      <Point><coordinates>12.913374,45.802519</coordinates></Point>
+  </Placemark>
+</Folder>
+</Document></kml>

@@ -1,0 +1,12 @@
+<!-- SPDX-FileCopyrightText: 2026 Massimo Antonini -->
+<!-- GP-336, ADR-0016: the person the gateway names in sec-username, with the roles of the role service
+     geoportal. Tomcat lets only the gateway in (RemoteAddrValve), and the gateway always overwrites the
+     header. -->
+<requestHeaderAuthentication>
+  <id>geoportal-header</id>
+  <name>geoportal-header</name>
+  <className>org.geoserver.security.filter.GeoServerRequestHeaderAuthenticationFilter</className>
+  <roleSource class="org.geoserver.security.config.PreAuthenticatedUserNameFilterConfig$PreAuthenticatedUserNameRoleSource">RoleService</roleSource>
+  <roleServiceName>geoportal</roleServiceName>
+  <principalHeaderAttribute>sec-username</principalHeaderAttribute>
+</requestHeaderAuthentication>

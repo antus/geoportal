@@ -1,0 +1,47 @@
+[
+  {
+    "id": "document",
+    "name": "poi-esempio",
+    "version": "1.0"
+  },
+  {
+    "id": "poi-1",
+    "name": "Torre Civica",
+    "description": "Valverde — monumento (92 d.C.)",
+    "position": { "cartographicDegrees": [12.381245, 42.105372, 0] },
+    "point": { "color": { "rgba": [0, 229, 216, 255] }, "pixelSize": 12, "outlineColor": { "rgba": [255, 255, 255, 255] }, "outlineWidth": 2 },
+    "label": { "text": "Torre Civica", "font": "12pt sans-serif", "fillColor": { "rgba": [255, 255, 255, 255] }, "pixelOffset": { "cartesian2": [0, -20] }, "verticalOrigin": "BOTTOM" }
+  },
+  {
+    "id": "poi-2",
+    "name": "Cattedrale di Monteluce",
+    "description": "Monteluce — chiesa (1386)",
+    "position": { "cartographicDegrees": [10.874512, 44.612338, 0] },
+    "point": { "color": { "rgba": [0, 229, 216, 255] }, "pixelSize": 12, "outlineColor": { "rgba": [255, 255, 255, 255] }, "outlineWidth": 2 },
+    "label": { "text": "Cattedrale di Monteluce", "font": "12pt sans-serif", "fillColor": { "rgba": [255, 255, 255, 255] }, "pixelOffset": { "cartesian2": [0, -20] }, "verticalOrigin": "BOTTOM" }
+  },
+  {
+    "id": "poi-3",
+    "name": "Castello di Borgo Alto",
+    "description": "Borgo Alto — castello (1279)",
+    "position": { "cartographicDegrees": [15.103327, 40.917644, 0] },
+    "point": { "color": { "rgba": [0, 229, 216, 255] }, "pixelSize": 12, "outlineColor": { "rgba": [255, 255, 255, 255] }, "outlineWidth": 2 },
+    "label": { "text": "Castello di Borgo Alto", "font": "12pt sans-serif", "fillColor": { "rgba": [255, 255, 255, 255] }, "pixelOffset": { "cartesian2": [0, -20] }, "verticalOrigin": "BOTTOM" }
+  },
+  {
+    "id": "poi-4",
+    "name": "Ponte dei Mulini",
+    "description": "Pietrachiara — ponte (1345)",
+    "position": { "cartographicDegrees": [11.948761, 43.302185, 0] },
+    "point": { "color": { "rgba": [0, 229, 216, 255] }, "pixelSize": 12, "outlineColor": { "rgba": [255, 255, 255, 255] }, "outlineWidth": 2 },
+    "label": { "text": "Ponte dei Mulini", "font": "12pt sans-serif", "fillColor": { "rgba": [255, 255, 255, 255] }, "pixelOffset": { "cartesian2": [0, -20] }, "verticalOrigin": "BOTTOM" }
+  },
+  {
+    "id": "poi-5",
+    "name": "Piazza del Mercato",
+    "description": "Lagofondo — piazza (1200)",
+    "position": { "cartographicDegrees": [12.913374, 45.802519, 0] },
+    "point": { "color": { "rgba": [0, 229, 216, 255] }, "pixelSize": 12, "outlineColor": { "rgba": [255, 255, 255, 255] }, "outlineWidth": 2 },
+    "label": { "text": "Piazza del Mercato", "font": "12pt sans-serif", "fillColor": { "rgba": [255, 255, 255, 255] }, "pixelOffset": { "cartesian2": [0, -20] }, "verticalOrigin": "BOTTOM" }
+  }
+]

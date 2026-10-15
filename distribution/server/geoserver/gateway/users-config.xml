@@ -1,0 +1,18 @@
+<!-- SPDX-FileCopyrightText: 2026 Massimo Antonini -->
+<!-- GP-336: the people of Mosaikit for the AuthKey filter (no passwords: they never sign in to GeoServer),
+     from the same views as the roles. Written by configure.sh. -->
+<jdbcusergroupservice>
+  <id>geoportal-users</id>
+  <name>geoportal</name>
+  <className>org.geoserver.security.jdbc.JDBCUserGroupService</className>
+  <passwordEncoderName>emptyPasswordEncoder</passwordEncoderName>
+  <passwordPolicyName>default</passwordPolicyName>
+  <propertyFileNameDDL>usersddl.xml</propertyFileNameDDL>
+  <propertyFileNameDML>usersdml.xml</propertyFileNameDML>
+  <jndi>false</jndi>
+  <driverClassName>org.postgresql.Driver</driverClassName>
+  <connectURL>${GEOPORTAL_READER_URL}</connectURL>
+  <userName>${GEOPORTAL_READER_USER}</userName>
+  <password>${GEOPORTAL_READER_PASSWORD}</password>
+  <creatingTables>false</creatingTables>
+</jdbcusergroupservice>

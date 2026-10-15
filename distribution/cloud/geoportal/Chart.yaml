@@ -1,0 +1,13 @@
+# SPDX-FileCopyrightText: 2026 Massimo Antonini
+apiVersion: v2
+name: geoportal
+description: Geoportal on Kubernetes, the Mosaikit kernel with the extensions of Geoportal and GeoServer.
+type: application
+version: 2.0.0-SNAPSHOT
+appVersion: "2.0.0-SNAPSHOT"
+maintainers:
+  - name: Massimo Antonini
+dependencies:
+  # The chart of Mosaikit, copied into charts/ by the build of Geoportal.
+  - name: mosaikit
+    version: 0.1.0-SNAPSHOT

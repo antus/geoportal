@@ -1,0 +1,146 @@
+{{- /* SPDX-FileCopyrightText: 2026 Massimo Antonini */ -}}
+{{- if .Values.gateway.enabled }}
+{{- $name := include "geoportal.gateway.name" . }}
+{{- $geoserver := include "geoportal.geoserver.name" . }}
+{{- $domain := .Values.gateway.clusterDomain }}
+# The data gateway (GP-336, ADR-0022): nginx in front of Geoportal and GeoServer on one origin; the
+# Ingress of the installation points at its port http. Geoportal gives the go-ahead of each data
+# request; GeoServer accepts connections from the gateway only (the NetworkPolicy below).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "geoportal.labels" . | nindent 4 }}
+    app.kubernetes.io/name: gateway
+spec:
+  replicas: {{ .Values.gateway.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: gateway
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: gateway
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: gateway
+          image: "{{ .Values.gateway.image.repository }}:{{ .Values.gateway.image.tag }}"
+          imagePullPolicy: {{ .Values.gateway.image.pullPolicy }}
+          env:
+            # Full names: the resolver of nginx does not use the search domains of the pod.
+            - name: GATEWAY_MOSAIKIT
+              value: "{{ .Release.Name }}-mosaikit.{{ .Release.Namespace }}.svc.{{ $domain }}:80"
+            - name: GATEWAY_GEOSERVER
+              value: "{{ $geoserver }}.{{ .Release.Namespace }}.svc.{{ $domain }}:8080"
+            # The internal door: the NetworkPolicy of the gateway lets only GeoServer reach it.
+            - name: GATEWAY_GEOSERVER_NETWORK
+              value: "0.0.0.0/0"
+            - name: GATEWAY_MAX_BODY
+              value: {{ .Values.gateway.maxBody | default .Values.mosaikit.files.maxSize | quote }}
+            {{- if .Values.gateway.serviceKeySecret }}
+            # The key of the service identity "gateway" of Geoportal (API catalog, endpoint check-key).
+            - name: GATEWAY_SERVICE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.gateway.serviceKeySecret }}
+                  key: key
+            {{- end }}
+          ports:
+            - name: http
+              containerPort: 80
+            - name: admin
+              containerPort: 8480
+            - name: internal
+              containerPort: 8081
+          readinessProbe:
+            httpGet:
+              path: /_gw_health
+              port: http
+          resources:
+            {{- toYaml .Values.gateway.resources | nindent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "geoportal.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: gateway
+    app.kubernetes.io/instance: {{ .Release.Name }}
+  ports:
+    # People: point the Ingress here, not at the service of Mosaikit.
+    - name: http
+      port: 80
+      targetPort: http
+    # The administration of GeoServer and the calls of the catalog to it (kubectl port-forward).
+    - name: admin
+      port: 8480
+      targetPort: admin
+    # The AuthKey mapper of GeoServer.
+    - name: internal
+      port: 8081
+      targetPort: internal
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "geoportal.labels" . | nindent 4 }}
+spec:
+  # The doors of the gateway: people at http from anywhere, the administration from Geoportal only (and
+  # port-forward), the internal door from GeoServer only.
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: gateway
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  policyTypes: [Ingress]
+  ingress:
+    - ports:
+        - port: 80
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: mosaikit
+              app.kubernetes.io/instance: {{ .Release.Name }}
+      ports:
+        - port: 8480
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: geoserver
+              app.kubernetes.io/instance: {{ .Release.Name }}
+      ports:
+        - port: 8081
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $geoserver }}-from-gateway
+  labels:
+    {{- include "geoportal.labels" . | nindent 4 }}
+spec:
+  # GeoServer trusts the name header, so only the gateway may reach it (ADR-0016).
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: geoserver
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: gateway
+              app.kubernetes.io/instance: {{ .Release.Name }}
+      ports:
+        - port: 8080
+{{- end }}

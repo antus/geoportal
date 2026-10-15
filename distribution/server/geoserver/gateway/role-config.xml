@@ -1,0 +1,18 @@
+<!-- SPDX-FileCopyrightText: 2026 Massimo Antonini -->
+<!-- GP-336, ADR-0016: the roles of people, read from the published views of Mosaikit (mk_published, MK-123)
+     with the reader login, which may read those views and nothing else. Written by configure.sh. -->
+<jdbcroleservice>
+  <id>geoportal-roles</id>
+  <name>geoportal</name>
+  <className>org.geoserver.security.jdbc.JDBCRoleService</className>
+  <propertyFileNameDDL>rolesddl.xml</propertyFileNameDDL>
+  <propertyFileNameDML>rolesdml.xml</propertyFileNameDML>
+  <jndi>false</jndi>
+  <driverClassName>org.postgresql.Driver</driverClassName>
+  <connectURL>${GEOPORTAL_READER_URL}</connectURL>
+  <userName>${GEOPORTAL_READER_USER}</userName>
+  <password>${GEOPORTAL_READER_PASSWORD}</password>
+  <creatingTables>false</creatingTables>
+  <adminRoleName>ADMIN</adminRoleName>
+  <groupAdminRoleName>GROUP_ADMIN</groupAdminRoleName>
+</jdbcroleservice>

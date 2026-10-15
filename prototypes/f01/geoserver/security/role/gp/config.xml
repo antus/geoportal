@@ -1,0 +1,17 @@
+<!-- SPDX-FileCopyrightText: 2026 Massimo Antonini -->
+<!-- GP-327 F01: roles of people read from read-only views (schema gs_sec) in the Mosaikit database. -->
+<jdbcroleservice>
+  <id>f01-gp-roles</id>
+  <name>gp</name>
+  <className>org.geoserver.security.jdbc.JDBCRoleService</className>
+  <propertyFileNameDDL>rolesddl.xml</propertyFileNameDDL>
+  <propertyFileNameDML>rolesdml.xml</propertyFileNameDML>
+  <jndi>false</jndi>
+  <driverClassName>org.postgresql.Driver</driverClassName>
+  <connectURL>jdbc:postgresql://postgis:5432/mosaikit?currentSchema=gs_sec</connectURL>
+  <userName>gs_reader</userName>
+  <password>f01-proof</password>
+  <creatingTables>false</creatingTables>
+  <adminRoleName>ADMIN</adminRoleName>
+  <groupAdminRoleName>GROUP_ADMIN</groupAdminRoleName>
+</jdbcroleservice>

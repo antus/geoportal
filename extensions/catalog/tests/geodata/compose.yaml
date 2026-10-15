@@ -1,0 +1,36 @@
+# SPDX-FileCopyrightText: 2026 Massimo Antonini
+#
+# The geodata database of the server distribution (PostGIS with PostGIS raster), for the end-to-end
+# tests of the loading on the bench (tests/loading.spec.ts, GP-937). The passwords are for the tests only.
+#
+#   docker compose -p geoportal-f03-gp937 -f tests/geodata/compose.yaml up -d --wait
+#   GEOPORTAL_TEST_GEODATA=1 npm test       (GEOPORTAL_TEST_GEODATA_PROJECT for another -p)
+#   docker compose -p geoportal-f03-gp937 -f tests/geodata/compose.yaml down -v
+#
+# The geodata database on 127.0.0.1:15437, login geoserver / catalog-test-db.
+services:
+  postgres:
+    image: postgis/postgis:18-3.6
+    environment:
+      POSTGRES_USER: mosaikit
+      POSTGRES_PASSWORD: catalog-test
+      POSTGRES_DB: mosaikit
+      GEOSERVER_DB_PASSWORD: catalog-test-db
+    volumes:
+      - ../../../../distribution/server/postgres/init-geoserver.sh:/docker-entrypoint-initdb.d/30-init-geoserver.sh:ro
+    ports: ['127.0.0.1:15437:5432']
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U geoserver -d geodata']
+      interval: 3s
+      retries: 30
+
+  # The loader of distribution/server/loader (ADR-0019), with --profile loader and
+  # GEOPORTAL_TEST_LOADER=1: it downloads the uploads from the bench on this computer through signed
+  # links, and writes into the PostGIS above.
+  loader:
+    profiles: [loader]
+    build: ../../../../distribution/server/loader
+    image: geoportal-server/loader:test
+    ports: ['127.0.0.1:18090:8090']
+    extra_hosts: ['host.docker.internal:host-gateway']
+    mem_limit: 512m

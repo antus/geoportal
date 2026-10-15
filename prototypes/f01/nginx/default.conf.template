@@ -1,0 +1,111 @@
+# SPDX-FileCopyrightText: 2026 Massimo Antonini
+#
+# GP-327 F01: the gateway (ADR-0006). The nginx image fills ${SERVICE_BASIC} and ${ROLES_API_KEY}
+# from the environment at start.
+
+upstream geoserver { server geoserver:8080; }
+# The Mosaikit kernel runs on the host in the proofs.
+upstream mosaikit { server host.docker.internal:18890; }
+
+# The short cache of the go-ahead: per session and workspace.
+proxy_cache_path /var/cache/nginx/gpcheck keys_zone=gpcheck:1m max_size=10m inactive=60s;
+map $http_cookie $mk_session {
+    default "";
+    "~(?:^|;\s*)mosaikit-session=(?<value>[^;]+)" $value;
+}
+
+# --- The door for people ------------------------------------------------------------------------
+server {
+    listen 80;
+    client_max_body_size 50m;
+
+    # Mosaikit on the same origin: shell, API, sign-in.
+    location / {
+        proxy_pass http://mosaikit;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header sec-username "";
+    }
+
+    # Data with the session of Mosaikit: /gw/ows/<workspace>/<wms|wfs|wcs|ows>. The workspace in
+    # the path is the organization; GeoServer's virtual service serves only that workspace.
+    location ~ ^/gw/ows/(?<gw_ws>[a-z0-9][a-z0-9-]*)/(?<gw_svc>wms|wfs|wcs|ows)$ {
+        auth_request /_gp_check;
+        auth_request_set $gp_user $upstream_http_x_geoportal_user;
+        # Whether the go-ahead came from the cache, for the proofs.
+        auth_request_set $gp_cache $upstream_cache_status;
+        add_header X-Gp-Check-Cache $gp_cache always;
+        # ALWAYS set: the header a client sends never passes (empty = not sent at all).
+        proxy_set_header sec-username $gp_user;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header Cookie "";
+        proxy_set_header Authorization "";
+        proxy_pass http://geoserver/geoserver/$gw_ws/$gw_svc$is_args$args;
+    }
+
+    # Data with a personal key, as QGIS asks for it: /gw/key/<workspace>/<service>?authkey=...
+    # No session here: GeoServer's AuthKey filter asks Mosaikit (through the internal door below).
+    location ~ ^/gw/key/(?<gw_ws>[a-z0-9][a-z0-9-]*)/(?<gw_svc>wms|wfs|wcs|ows)$ {
+        proxy_set_header sec-username "";
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header Cookie "";
+        proxy_set_header Authorization "";
+        proxy_pass http://geoserver/geoserver/$gw_ws/$gw_svc$is_args$args;
+    }
+
+    # The go-ahead: may this session read this workspace? The kernel answers 401 without a
+    # session and 403 when the person is not a member of the organization of the workspace.
+    location = /_gp_check {
+        internal;
+        proxy_pass http://mosaikit/api/v1/ext/proofstub/gateway-check;
+        proxy_pass_request_body off;
+        proxy_set_header Content-Length "";
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Original-URI $request_uri;
+        proxy_set_header X-Mosaikit-Organization $gw_ws;
+        proxy_set_header X-Geoportal-Workspace $gw_ws;
+        # Only the session cookie counts, never HTTP Basic sent by a client.
+        proxy_set_header Authorization "";
+        proxy_set_header Cookie "mosaikit-session=$mk_session";
+        proxy_cache gpcheck;
+        proxy_cache_key "$gw_ws|$mk_session";
+        proxy_cache_valid 200 403 10s;
+        proxy_no_cache $mk_session_empty;
+        proxy_ignore_headers Set-Cookie Cache-Control Expires;
+    }
+}
+
+map $mk_session $mk_session_empty { "" 1; default 0; }
+
+# --- Administration of GeoServer, this computer only (published on 127.0.0.1) ----------------------
+server {
+    listen 8480;
+    client_max_body_size 200m;
+    location /geoserver/ {
+        proxy_pass http://geoserver;
+        proxy_set_header Host $http_host;
+        proxy_set_header sec-username "";
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_read_timeout 600s;
+    }
+}
+
+# --- The calls of GeoServer to Mosaikit, inside the Docker network only (not published) ---------------
+server {
+    listen 8081;
+    # AuthKey web service mapper: it cannot send credentials, the gateway adds the service account's.
+    location = /authkey {
+        proxy_pass http://mosaikit/api/v1/ext/proofstub/authkey$is_args$args;
+        proxy_set_header Authorization "Basic ${SERVICE_BASIC}";
+        proxy_set_header Cookie "";
+    }
+    # REST role service: it sends "Authorization: ApiKey <key>"; the gateway checks it and swaps it.
+    # GeoServer keeps only the host of its baseUrl and asks for /api/roles, /api/adminRole and
+    # /api/users/<name> at the root, hence this location.
+    location /api/ {
+        if ($http_authorization != "ApiKey ${ROLES_API_KEY}") { return 401; }
+        proxy_pass http://mosaikit/api/v1/ext/proofstub/roles/api/;
+        proxy_set_header Authorization "Basic ${SERVICE_BASIC}";
+        proxy_set_header Cookie "";
+    }
+}

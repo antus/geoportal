@@ -1,0 +1,16 @@
+// SPDX-FileCopyrightText: 2026 Massimo Antonini
+package dev.geoportal.catalog.proxy;
+
+/**
+ * An address the proxy will not reach: not http or https, malformed, outside the registered service,
+ * or resolving to an internal network. The message says why, in English, without the addresses the
+ * name resolved to, so that an answer never maps the internal network for whoever asks.
+ */
+public final class RefusedTarget extends Exception {
+
+    private static final long serialVersionUID = 1L;
+
+    public RefusedTarget(String message) {
+        super(message);
+    }
+}

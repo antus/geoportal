@@ -1,0 +1,19 @@
+{
+  "type": "FeatureCollection",
+  "fonte": "Dati sintetici di Geoportal, generati da src/samples/generate.py",
+  "licenza": "Nessuna licenza di terzi: luoghi e valori inventati",
+  "crs": "EPSG:4326",
+  "note": "Stato del mare su dieci boe inventate, una lettura ciascuna.",
+  "features": [
+    {"type": "Feature", "properties": {"stazione": "Boa Valverde", "rete": "Rete di boe di esempio", "rilevato": "2026-08-23T23:30", "altezza_onda_m": 1.14, "periodo_s": 4.1, "direzione_gradi": 164, "temp_superficie_c": 28.8}, "geometry": {"type": "Point", "coordinates": [8.098, 37.511]}},
+    {"type": "Feature", "properties": {"stazione": "Boa Capo Lucente", "rete": "Rete di boe di esempio", "rilevato": "2026-08-23T23:30", "altezza_onda_m": 0.11, "periodo_s": 4.81, "direzione_gradi": 85, "temp_superficie_c": 26.0}, "geometry": {"type": "Point", "coordinates": [8.931, 41.951]}},
+    {"type": "Feature", "properties": {"stazione": "Boa Punta Esempio", "rete": "Rete di boe di esempio", "rilevato": "2026-08-23T23:30", "altezza_onda_m": 0.15, "periodo_s": 3.37, "direzione_gradi": 13, "temp_superficie_c": 26.6}, "geometry": {"type": "Point", "coordinates": [9.943, 40.061]}},
+    {"type": "Feature", "properties": {"stazione": "Boa Cala Serena", "rete": "Rete di boe di esempio", "rilevato": "2026-08-23T23:30", "altezza_onda_m": 0.43, "periodo_s": 3.96, "direzione_gradi": 174, "temp_superficie_c": 26.6}, "geometry": {"type": "Point", "coordinates": [11.018, 38.186]}},
+    {"type": "Feature", "properties": {"stazione": "Boa Isola Piana", "rete": "Rete di boe di esempio", "rilevato": "2026-08-23T23:30", "altezza_onda_m": 1.15, "periodo_s": 5.63, "direzione_gradi": 314, "temp_superficie_c": 25.6}, "geometry": {"type": "Point", "coordinates": [12.107, 42.594]}},
+    {"type": "Feature", "properties": {"stazione": "Boa Scogliera Alta", "rete": "Rete di boe di esempio", "rilevato": "2026-08-23T23:30", "altezza_onda_m": 0.1, "periodo_s": 4.34, "direzione_gradi": 7, "temp_superficie_c": 27.2}, "geometry": {"type": "Point", "coordinates": [13.163, 40.626]}},
+    {"type": "Feature", "properties": {"stazione": "Boa Lido Chiaro", "rete": "Rete di boe di esempio", "rilevato": "2026-08-23T23:30", "altezza_onda_m": 0.03, "periodo_s": 3.39, "direzione_gradi": 239, "temp_superficie_c": 26.1}, "geometry": {"type": "Point", "coordinates": [14.054, 38.742]}},
+    {"type": "Feature", "properties": {"stazione": "Boa Porto Fiorito", "rete": "Rete di boe di esempio", "rilevato": "2026-08-23T23:30", "altezza_onda_m": 0.88, "periodo_s": 5.58, "direzione_gradi": 16, "temp_superficie_c": 29.0}, "geometry": {"type": "Point", "coordinates": [15.066, 43.203]}},
+    {"type": "Feature", "properties": {"stazione": "Boa Torre del Faro", "rete": "Rete di boe di esempio", "rilevato": "2026-08-23T23:30", "altezza_onda_m": 0.29, "periodo_s": 2.86, "direzione_gradi": 253, "temp_superficie_c": 24.6}, "geometry": {"type": "Point", "coordinates": [16.167, 41.418]}},
+    {"type": "Feature", "properties": {"stazione": "Boa Baia dei Gabbiani", "rete": "Rete di boe di esempio", "rilevato": "2026-08-23T23:30", "altezza_onda_m": 0.89, "periodo_s": 4.54, "direzione_gradi": 188, "temp_superficie_c": 28.4}, "geometry": {"type": "Point", "coordinates": [17.354, 39.45]}}
+  ]
+}

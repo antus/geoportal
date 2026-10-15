@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
+<!-- SPDX-FileCopyrightText: 2026 Massimo Antonini -->
+<properties>
+  <comment>GP-336: the people of Mosaikit, from its published views (MK-123), for the AuthKey filter: a
+    username, no password, enabled unless suspended; no groups and no properties. Read-only.</comment>
+  <entry key="users.count">
+    select count(*) from mk_published.account
+  </entry>
+  <entry key="users.all">
+    select username, null, case when active then 'Y' else 'N' end from mk_published.account
+  </entry>
+  <entry key="users.keyed">
+    select null, case when active then 'Y' else 'N' end from mk_published.account where username = ?
+  </entry>
+  <entry key="userprops.all">
+    select null, null, null where false
+  </entry>
+  <entry key="userprops.selectForUser">
+    select null, null where cast(? as text) is null and false
+  </entry>
+  <entry key="userprops.userPropsForGroup">
+    select null, null, null where cast(? as text) is null and false
+  </entry>
+  <entry key="user.usersHavingProperty">
+    select null, null, null where cast(? as text) is null and false
+  </entry>
+  <entry key="userprops.usersHavingProperty">
+    select null, null, null where cast(? as text) is null and false
+  </entry>
+  <entry key="userprops.userCountHavingProperty">
+    select 0 where cast(? as text) is null or true
+  </entry>
+  <entry key="user.usersNotHavingProperty">
+    select username, null, case when active then 'Y' else 'N' end from mk_published.account where cast(? as text) is null or true
+  </entry>
+  <entry key="userprops.usersNotHavingProperty">
+    select null, null, null where cast(? as text) is null and false
+  </entry>
+  <entry key="userprops.userCountNotHavingProperty">
+    select count(*) from mk_published.account where cast(? as text) is null or true
+  </entry>
+  <entry key="user.usersHavingPropertyValue">
+    select null, null, null where cast(? as text) is null and cast(? as text) is null and false
+  </entry>
+  <entry key="userprops.usersHavingPropertyValue">
+    select null, null, null where cast(? as text) is null and cast(? as text) is null and false
+  </entry>
+  <entry key="userprops.userCountHavingPropertyValue">
+    select 0 where cast(? as text) is null and cast(? as text) is null or true
+  </entry>
+  <entry key="groups.count">
+    select 0
+  </entry>
+  <entry key="groups.all">
+    select null, null where false
+  </entry>
+  <entry key="groups.keyed">
+    select null where cast(? as text) is null and false
+  </entry>
+  <entry key="groupmembers.groupsForUser">
+    select null, null where cast(? as text) is null and false
+  </entry>
+  <entry key="groupmembers.usersForGroup">
+    select null, null, null where cast(? as text) is null and false
+  </entry>
+</properties>

@@ -1,0 +1,56 @@
+# SPDX-FileCopyrightText: 2026 Massimo Antonini
+#
+# GeoServer and PostGIS of the server distribution, for the end-to-end test of GP-334 on the bench
+# (tests/geoserver.spec.ts). The passwords are for the tests only.
+#
+#   docker compose -p geoportal-catalog-test -f tests/geoserver/compose.yaml up -d --build
+#   GEOPORTAL_TEST_GEOSERVER=1 npm test     (GEOPORTAL_TEST_COMPOSE_PROJECT for another -p)
+#   docker compose -p geoportal-catalog-test -f tests/geoserver/compose.yaml down -v
+#
+# GeoServer on 127.0.0.1:18680, the geodata database on 127.0.0.1:15434.
+services:
+  postgres:
+    image: postgis/postgis:18-3.6
+    environment:
+      POSTGRES_USER: mosaikit
+      POSTGRES_PASSWORD: catalog-test
+      POSTGRES_DB: mosaikit
+      GEOSERVER_DB_PASSWORD: catalog-test-db
+    volumes:
+      - ../../../../distribution/server/postgres/init-geoserver.sh:/docker-entrypoint-initdb.d/30-init-geoserver.sh:ro
+    ports: ['127.0.0.1:15434:5432']
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U geoserver -d geodata']
+      interval: 3s
+      retries: 30
+
+  geoserver:
+    build: ../../../../distribution/server/geoserver
+    image: geoportal-server/geoserver:2.28.5
+    environment:
+      GEOSERVER_ADMIN_USER: gsadmin
+      GEOSERVER_ADMIN_PASSWORD: catalog-test-admin
+      GEOFENCE_DB_HOST: postgres
+      GEOFENCE_DB_NAME: geoserver
+      GEOFENCE_DB_USER: geoserver
+      GEOFENCE_DB_PASSWORD: catalog-test-db
+      SKIP_DEMO_DATA: 'true'
+      EXTRA_JAVA_OPTS: '-Xms256m -Xmx1g'
+    ports: ['127.0.0.1:18680:8080']
+    depends_on:
+      postgres: { condition: service_healthy }
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -fs -u gsadmin:catalog-test-admin http://localhost:8080/geoserver/rest/about/version.json >/dev/null']
+      interval: 5s
+      retries: 60
+
+  geoserver-init:
+    image: curlimages/curl:8.16.0
+    entrypoint: ['sh', '/prepare.sh']
+    environment:
+      GEOSERVER_ADMIN_USER: gsadmin
+      GEOSERVER_ADMIN_PASSWORD: catalog-test-admin
+    volumes:
+      - ../../../../distribution/server/geoserver/init/prepare.sh:/prepare.sh:ro
+    depends_on:
+      geoserver: { condition: service_healthy }

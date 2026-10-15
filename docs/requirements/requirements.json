@@ -1,0 +1,22 @@
+{
+  "prefix": "GP",
+  "dependsOn": ["MK", "EXT"],
+  "areas": [
+    "maps",
+    "data",
+    "data-access",
+    "catalog",
+    "dashboards",
+    "processes",
+    "collaboration",
+    "monitoring",
+    "ai",
+    "editing",
+    "interop",
+    "public",
+    "compliance",
+    "bim",
+    "packaging",
+    "content"
+  ]
+}

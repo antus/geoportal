@@ -1,0 +1,149 @@
+[
+  {
+    "file": "poi-esempio.geojson",
+    "title": "Luoghi di esempio",
+    "description": "Cinque luoghi di cinque città inventate: il set di partenza.",
+    "source": "dati sintetici di Geoportal"
+  },
+  {
+    "file": "poi-esempio.csv",
+    "title": "Luoghi di esempio — tabella",
+    "description": "Le stesse posizioni in CSV, con colonne di latitudine e longitudine.",
+    "source": "dati sintetici di Geoportal"
+  },
+  {
+    "file": "poi-esempio.gml",
+    "title": "Luoghi di esempio — GML",
+    "description": "GML 3.2: verifica anche lo scambio degli assi.",
+    "source": "dati sintetici di Geoportal"
+  },
+  {
+    "file": "poi-esempio.kml",
+    "title": "Luoghi di esempio — KML",
+    "description": "KML con schema e attributi estesi.",
+    "source": "dati sintetici di Geoportal"
+  },
+  {
+    "file": "poi-esempio.kmz",
+    "title": "Luoghi di esempio — KMZ",
+    "description": "KML compresso: prova la decompressione automatica.",
+    "source": "dati sintetici di Geoportal"
+  },
+  {
+    "file": "poi-esempio.gpkg",
+    "title": "Luoghi di esempio — GeoPackage",
+    "description": "GeoPackage con attributi tipizzati: prova la lettura del database SQLite.",
+    "source": "dati sintetici di Geoportal"
+  },
+  {
+    "file": "poi-esempio-shp.zip",
+    "title": "Luoghi di esempio — Shapefile",
+    "description": "Shapefile compresso: prova il percorso di decompressione.",
+    "source": "dati sintetici di Geoportal"
+  },
+  {
+    "file": "poi-esempio.gpx",
+    "title": "Luoghi di esempio — GPX",
+    "description": "Waypoint GPX con nome e attributi nelle estensioni.",
+    "source": "dati sintetici di Geoportal"
+  },
+  {
+    "file": "poi-esempio.czml",
+    "title": "Luoghi di esempio — CZML",
+    "description": "Pacchetti CZML con posizione, punto ed etichetta.",
+    "source": "dati sintetici di Geoportal"
+  },
+  {
+    "file": "csv-bom-crlf.csv",
+    "title": "Località di esempio — BOM e fine riga Windows",
+    "description": "BOM UTF-8 e CRLF, accenti e virgole tra virgolette: il caso che rompe i lettori ingenui.",
+    "source": "dati sintetici di Geoportal"
+  },
+  {
+    "file": "csv-semicolon-decimal.csv",
+    "title": "Luoghi — punto e virgola, virgola decimale",
+    "description": "Come esporta Excel in italiano.",
+    "source": "dati sintetici di Geoportal"
+  },
+  {
+    "file": "csv-tab.csv",
+    "title": "Luoghi — separatore tabulazione",
+    "description": "Separatore TAB.",
+    "source": "dati sintetici di Geoportal"
+  },
+  {
+    "file": "csv-pipe-xy.csv",
+    "title": "Luoghi — separatore barra verticale",
+    "description": "Separatore | con colonne X e Y.",
+    "source": "dati sintetici di Geoportal",
+    "crs": "EPSG:4326"
+  },
+  {
+    "file": "csv-wkt-point.csv",
+    "title": "Luoghi — geometria WKT",
+    "description": "Colonna WKT con POINT.",
+    "source": "dati sintetici di Geoportal",
+    "crs": "EPSG:4326"
+  },
+  {
+    "file": "csv-wkt-polygon.csv",
+    "title": "Quartiere e ciclabile — geometria WKT",
+    "description": "Colonna WKT con POLYGON e LINESTRING nella stessa tabella.",
+    "source": "dati sintetici di Geoportal",
+    "crs": "EPSG:4326"
+  },
+  {
+    "file": "csv-geojson-col.csv",
+    "title": "Luoghi — geometria in colonna",
+    "description": "Geometria annidata in una colonna GeoJSON.",
+    "source": "dati sintetici di Geoportal"
+  },
+  {
+    "file": "rilievo-esempio.tif",
+    "title": "Rilievo di un'isola di esempio",
+    "description": "Quota di un'isola inventata in scala ipsometrica, dal livello del mare alle cime.",
+    "source": "dati sintetici di Geoportal"
+  },
+  {
+    "file": "quartieri_valverde.geojson",
+    "title": "Quartieri di Valverde",
+    "description": "I 15 quartieri di Valverde, città inventata, con confini che combaciano.",
+    "source": "dati sintetici di Geoportal"
+  },
+  {
+    "file": "piste_ciclabili_valverde.geojson",
+    "title": "Piste ciclabili di Valverde",
+    "description": "Tratti singoli e percorsi in più tratti: linee e multilinee nello stesso dato.",
+    "source": "dati sintetici di Geoportal"
+  },
+  {
+    "file": "rete_tpl_valverde.geojson",
+    "title": "Metro, tram e ferrovie urbane di Valverde",
+    "description": "Le linee di trasporto pubblico su ferro, andata e ritorno, con il colore della linea.",
+    "source": "dati sintetici di Geoportal"
+  },
+  {
+    "file": "aree_protette_esempio.geojson",
+    "title": "Parchi della Regione Esempio",
+    "description": "Diciannove parchi e riserve, adatti a filtri e legende; non tutti hanno gli stessi attributi.",
+    "source": "dati sintetici di Geoportal"
+  },
+  {
+    "file": "porti_esempio.geojson",
+    "title": "Porti di una costa di esempio",
+    "description": "Centocinquanta porti e approdi, nomi accentati e in alfabeto greco: buon banco di prova per il raggruppamento.",
+    "source": "dati sintetici di Geoportal"
+  },
+  {
+    "file": "boe_meteo.geojson",
+    "title": "Boe meteo-marine",
+    "description": "Stato del mare su dieci boe di esempio: altezza e periodo dell'onda, direzione, temperatura.",
+    "source": "dati sintetici di Geoportal"
+  },
+  {
+    "file": "osservazioni_naturalistiche.geojson",
+    "title": "Osservazioni naturalistiche",
+    "description": "Avvistamenti di uccelli, mammiferi e anfibi in luoghi inventati: adatti alla mappa di densità.",
+    "source": "dati sintetici di Geoportal"
+  }
+]

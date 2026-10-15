@@ -1,0 +1,13 @@
+# SPDX-FileCopyrightText: 2026 Massimo Antonini
+# PROOF STUB (GP-327, phase F01): only for the proofs in prototypes/f01, never in a distribution.
+id: dev.geoportal.proofstub
+version: 0.1.0
+name: Proof stub (F01)
+description: The endpoints the gateway and GeoServer call in the F01 proofs. Replaced by GP-334, GP-335 and GP-336.
+kind: [service]
+platform: '>=0.1 <1'
+backend:
+  jar: lib/proofstub.jar
+  api: proofstub
+database:
+  schema: ext_proofstub

@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SPDX-FileCopyrightText: 2026 Massimo Antonini
+
+  GP-327 F01: the server.xml of the GeoServer image (without its JNDI resource, which is off), plus
+  ONE valve. GeoServer trusts the user header of its request header filter from whoever sends it,
+  and GeoFence takes the caller's address from X-Forwarded-For when present, so neither can tell
+  the gateway from anyone else. Tomcat can: it accepts TCP connections only from the gateway
+  (10.231.0.10) and from inside the container (its health check). Everything else, also on the same
+  Docker network, gets 403 before GeoServer sees the request.
+  The image copies this file from /opt/config_overrides with envsubst: no dollar signs here.
+-->
+<Server port="8005" shutdown="SHUTDOWN">
+    <Listener className="org.apache.catalina.startup.VersionLoggerListener" />
+    <Listener className="org.apache.catalina.core.AprLifecycleListener" SSLEngine="on" />
+    <Listener className="org.apache.catalina.core.JreMemoryLeakPreventionListener" />
+    <Listener className="org.apache.catalina.mbeans.GlobalResourcesLifecycleListener" />
+    <Listener className="org.apache.catalina.core.ThreadLocalLeakPreventionListener" />
+    <GlobalNamingResources>
+        <Resource name="UserDatabase" auth="Container" type="org.apache.catalina.UserDatabase"
+                  description="User database that can be updated and saved"
+                  factory="org.apache.catalina.users.MemoryUserDatabaseFactory" pathname="conf/tomcat-users.xml" />
+    </GlobalNamingResources>
+    <Service name="Catalina">
+        <Connector port="8080" protocol="HTTP/1.1" connectionTimeout="20000" redirectPort="8443"
+                   maxParameterCount="1000" allowTrace="false" xpoweredBy="false" />
+        <Engine name="Catalina" defaultHost="localhost">
+            <Realm className="org.apache.catalina.realm.LockOutRealm">
+                <Realm className="org.apache.catalina.realm.UserDatabaseRealm" resourceName="UserDatabase"/>
+            </Realm>
+            <Host name="localhost" appBase="webapps" unpackWARs="true" autoDeploy="false" deployOnStartup="false">
+                <!-- Only the gateway (and the container itself) may talk to GeoServer. -->
+                <Valve className="org.apache.catalina.valves.RemoteAddrValve"
+                       allow="10\.231\.0\.10|127\.0\.0\.1|0:0:0:0:0:0:0:1" />
+                <Valve className="org.apache.catalina.valves.AccessLogValve" directory="logs"
+                       prefix="localhost_access_log" suffix=".txt" pattern="%h %l %u %t &quot;%r&quot; %s %b" />
+                <Context antiResourceLocking="false" override="true" docBase="geoserver" privileged="true"
+                         path="/geoserver" />
+            </Host>
+        </Engine>
+    </Service>
+</Server>

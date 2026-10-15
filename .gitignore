@@ -1,0 +1,11 @@
+target/
+lib/
+dist/
+node_modules/
+.mosaikit-bench/
+test-results/
+playwright-report/
+# Until the first release of Mosaikit the dependencies on it follow its latest snapshot.
+package-lock.json
+.portable-cache/
+__pycache__/

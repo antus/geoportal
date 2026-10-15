@@ -1,0 +1,17 @@
+<!-- SPDX-FileCopyrightText: 2026 Massimo Antonini -->
+<!-- GP-327 F01: the people of Mosaikit, for the AuthKey filter (no passwords: emptyPasswordEncoder). -->
+<jdbcusergroupservice>
+  <id>f01-gp-users</id>
+  <name>gpusers</name>
+  <className>org.geoserver.security.jdbc.JDBCUserGroupService</className>
+  <passwordEncoderName>emptyPasswordEncoder</passwordEncoderName>
+  <passwordPolicyName>default</passwordPolicyName>
+  <propertyFileNameDDL>usersddl.xml</propertyFileNameDDL>
+  <propertyFileNameDML>usersdml.xml</propertyFileNameDML>
+  <jndi>false</jndi>
+  <driverClassName>org.postgresql.Driver</driverClassName>
+  <connectURL>jdbc:postgresql://postgis:5432/mosaikit?currentSchema=gs_sec</connectURL>
+  <userName>gs_reader</userName>
+  <password>f01-proof</password>
+  <creatingTables>false</creatingTables>
+</jdbcusergroupservice>

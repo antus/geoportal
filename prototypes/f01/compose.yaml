@@ -1,0 +1,91 @@
+# SPDX-FileCopyrightText: 2026 Massimo Antonini
+#
+# GP-327, phase F01: the platform proofs on the Mosaikit stack. For the proofs only: the passwords
+# below are not secrets. See RESULT.md.
+#
+#   docker compose -p geoportal-f01 up -d --build
+#
+# Ports (none of 8080, 8180, 8280, 5432, 5433, 8800, 8888):
+#   18801            the gateway, the only door for people (Mosaikit and the data)
+#   127.0.0.1:18480  GeoServer administration, through the gateway too (it strips the user header)
+#   127.0.0.1:15433  PostGIS, for the Mosaikit kernel that runs on this computer (port 18890)
+#
+# GeoServer publishes no port, and Tomcat accepts connections only from the gateway's address
+# (geoserver/server.xml): that is what makes "the user header comes only from the gateway" true.
+name: geoportal-f01
+
+services:
+  postgis:
+    image: postgis/postgis:18-3.6
+    environment:
+      POSTGRES_USER: mosaikit
+      POSTGRES_PASSWORD: f01-proof
+      POSTGRES_DB: mosaikit
+      GEOSERVER_DB_PASSWORD: f01-proof
+    volumes:
+      - pgdata:/var/lib/postgresql
+      # The user geoserver with its databases geoserver (GeoFence) and geodata, as in the server
+      # distribution.
+      - ../../distribution/server/postgres/init-geoserver.sh:/docker-entrypoint-initdb.d/30-init-geoserver.sh:ro
+    ports: ['127.0.0.1:15433:5432']
+    networks: [db]
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U mosaikit -d mosaikit && pg_isready -U geoserver -d geodata']
+      interval: 3s
+      retries: 30
+
+  geoserver:
+    # The image of the server distribution (GeoFence on PostgreSQL, Importer, AuthKey, 60 s cache).
+    build: ../../distribution/server/geoserver
+    image: geoportal-f01/geoserver:2.28.5
+    environment:
+      GEOSERVER_ADMIN_USER: gsadmin
+      GEOSERVER_ADMIN_PASSWORD: f01-proof
+      GEOFENCE_DB_HOST: postgis
+      GEOFENCE_DB_NAME: geoserver
+      GEOFENCE_DB_USER: geoserver
+      GEOFENCE_DB_PASSWORD: f01-proof
+      SKIP_DEMO_DATA: 'true'
+      EXTRA_JAVA_OPTS: '-Xms256m -Xmx1g'
+    volumes:
+      - gsdata:/opt/geoserver_data
+      # Tomcat: connections only from the gateway (and from inside the container, for its
+      # health check).
+      - ./geoserver/server.xml:/opt/config_overrides/server.xml:ro
+    networks:
+      db: {}
+      gs: { ipv4_address: 10.231.0.20 }
+    depends_on:
+      postgis: { condition: service_healthy }
+
+  gateway:
+    image: nginx:1.27-alpine
+    environment:
+      # Credentials of the service account of GeoServer in Mosaikit (HTTP Basic), added by the
+      # gateway to the calls of GeoServer, and the API key that GeoServer's REST role service sends.
+      SERVICE_BASIC: ${SERVICE_BASIC:-Z2Vvc2VydmVyQGYwMS1wcm9vZi50ZXN0OmYwMS1zZXJ2aWNlLXBhc3N3b3Jk}
+      ROLES_API_KEY: ${ROLES_API_KEY:-f01-roles-api-key}
+    volumes:
+      - ./nginx/default.conf.template:/etc/nginx/templates/default.conf.template:ro
+    ports:
+      - '18801:80'
+      - '127.0.0.1:18480:8480'
+    extra_hosts: ['host.docker.internal:host-gateway']
+    networks:
+      edge: {}
+      gs: { ipv4_address: 10.231.0.10 }
+    depends_on: [geoserver]
+
+networks:
+  # Gateway and GeoServer only: the gateway's address is the one Tomcat lets in.
+  gs:
+    ipam:
+      config: [{ subnet: 10.231.0.0/24 }]
+  # GeoServer and PostGIS.
+  db: {}
+  # The gateway towards Mosaikit on the host.
+  edge: {}
+
+volumes:
+  pgdata: {}
+  gsdata: {}

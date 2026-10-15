@@ -1,0 +1,130 @@
+{{- /* SPDX-FileCopyrightText: 2026 Massimo Antonini */ -}}
+{{- if .Values.geoserver.enabled }}
+{{- $name := include "geoportal.geoserver.name" . }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ $name }}-data
+  labels:
+    {{- include "geoportal.labels" . | nindent 4 }}
+spec:
+  accessModes: [ReadWriteOnce]
+  {{- with .Values.geoserver.persistence.storageClass }}
+  storageClassName: {{ . }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.geoserver.persistence.size }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "geoportal.labels" . | nindent 4 }}
+    app.kubernetes.io/name: geoserver
+spec:
+  replicas: 1
+  # One GeoServer per data directory: the old one stops before the new one starts.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: geoserver
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: geoserver
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      securityContext:
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: geoserver
+          image: "{{ .Values.geoserver.image.repository }}:{{ .Values.geoserver.image.tag }}"
+          imagePullPolicy: {{ .Values.geoserver.image.pullPolicy }}
+          env:
+            - name: GEOSERVER_ADMIN_USER
+              value: gsadmin   # never "admin", the administrator of Geoportal (ADR-0016)
+            - name: GEOSERVER_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.geoserver.adminSecret }}
+                  key: password
+            - name: GEOFENCE_DB_HOST
+              value: {{ .Values.geoserver.geofence.host | quote }}
+            - name: GEOFENCE_DB_NAME
+              value: {{ .Values.geoserver.geofence.database | quote }}
+            - name: GEOFENCE_DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.geoserver.geofence.existingSecret }}
+                  key: username
+            - name: GEOFENCE_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.geoserver.geofence.existingSecret }}
+                  key: password
+            - name: SKIP_DEMO_DATA
+              value: "true"
+            - name: EXTRA_JAVA_OPTS
+              value: {{ .Values.geoserver.javaOptions | quote }}
+            {{- if .Values.gateway.enabled }}
+            # Behind the data gateway (GP-336): a NetworkPolicy lets only the gateway in, the roles come
+            # from the published views of Geoportal, personal keys are checked through the gateway.
+            - name: GEOPORTAL_GATEWAY_ADDRESS
+              value: network-policy
+            - name: GEOPORTAL_GATEWAY_INTERNAL
+              value: "http://{{ include "geoportal.gateway.name" . }}:8081"
+            - name: GEOPORTAL_READER_URL
+              value: {{ .Values.gateway.reader.url | quote }}
+            - name: GEOPORTAL_READER_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.gateway.reader.existingSecret }}
+                  key: username
+            - name: GEOPORTAL_READER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.gateway.reader.existingSecret }}
+                  key: password
+            {{- end }}
+          ports:
+            - name: http
+              containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /geoserver/web/
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.geoserver.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /opt/geoserver_data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ $name }}-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "geoportal.labels" . | nindent 4 }}
+spec:
+  # Inside the cluster only: people reach the data through the gateway.
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: geoserver
+    app.kubernetes.io/instance: {{ .Release.Name }}
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+{{- end }}

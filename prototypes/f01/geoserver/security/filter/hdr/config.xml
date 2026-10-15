@@ -1,0 +1,10 @@
+<!-- SPDX-FileCopyrightText: 2026 Massimo Antonini -->
+<!-- GP-327 F01: the person named by the gateway in sec-username; roles from the role service. -->
+<requestHeaderAuthentication>
+  <id>f01-gp-header</id>
+  <name>hdr</name>
+  <className>org.geoserver.security.filter.GeoServerRequestHeaderAuthenticationFilter</className>
+  <roleSource class="org.geoserver.security.config.PreAuthenticatedUserNameFilterConfig$PreAuthenticatedUserNameRoleSource">RoleService</roleSource>
+  <roleServiceName>gp</roleServiceName>
+  <principalHeaderAttribute>sec-username</principalHeaderAttribute>
+</requestHeaderAuthentication>

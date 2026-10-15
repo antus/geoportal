@@ -1,0 +1,14 @@
+<!-- SPDX-FileCopyrightText: 2026 Massimo Antonini -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <!-- The mark of Geoportal for light backgrounds: the same geometry as the dark variant, with a deeper gradient for contrast on white. -->
+  <defs>
+    <linearGradient id="lg-light" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00a89d"/><stop offset="100%" stop-color="#1a5dcc"/>
+    </linearGradient>
+  </defs>
+  <path d="M16 3.8L19.39 12.61L26.8 16L19.39 19.39L16 28.2L12.61 19.39L5.2 16L12.61 12.61Z" fill="url(#lg-light)"/>
+  <g fill="#04121a" opacity=".26">
+    <path d="M16 16L16 3.8L19.39 12.61Z"/><path d="M16 16L26.8 16L19.39 19.39Z"/>
+    <path d="M16 16L16 28.2L12.61 19.39Z"/><path d="M16 16L5.2 16L12.61 12.61Z"/>
+  </g>
+</svg>

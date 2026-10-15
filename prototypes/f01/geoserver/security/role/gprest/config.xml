@@ -1,0 +1,20 @@
+<!-- SPDX-FileCopyrightText: 2026 Massimo Antonini -->
+<!-- GP-327 F01: the REST role service, the fallback, against the proof stub extension (dev.geoportal.proofstub) through the gateway. -->
+<authKeyRESTRoleService>
+  <id>f01-gp-rest-roles</id>
+  <name>gprest</name>
+  <className>org.geoserver.security.GeoServerRestRoleService</className>
+  <baseUrl>http://gateway:8081</baseUrl>
+  <rolesRESTEndpoint>/api/roles</rolesRESTEndpoint>
+  <adminRoleRESTEndpoint>/api/adminRole</adminRoleRESTEndpoint>
+  <usersRESTEndpoint>/api/users</usersRESTEndpoint>
+  <rolesJSONPath>$.groups</rolesJSONPath>
+  <adminRoleJSONPath>$.adminRole</adminRoleJSONPath>
+  <usersJSONPath>$.users[?(@.username=='${username}')].groups</usersJSONPath>
+  <cacheConcurrencyLevel>4</cacheConcurrencyLevel>
+  <cacheMaximumSize>10000</cacheMaximumSize>
+  <cacheExpirationTime>30000</cacheExpirationTime>
+  <authApiKey>f01-roles-api-key</authApiKey>
+  <adminGroup>ADMIN</adminGroup>
+  <groupAdminGroup>GROUP_ADMIN</groupAdminGroup>
+</authKeyRESTRoleService>

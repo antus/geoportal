@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE beans PUBLIC "-//SPRING//DTD BEAN//EN" "http://www.springframework.org/dtd/spring-beans.dtd">
+<!--
+  SPDX-FileCopyrightText: 2026 Massimo Antonini
+
+  The authentication cache of GeoServer with short times. gs-main defines the bean
+  authCacheLifecycleHandler in applicationContext.xml with 1000 entries, 300 s of idle time and
+  600 s of life: ten minutes in which a person removed from a group keeps seeing the data of the
+  group. This file redefines it with the SAME id (with another id GeoServer does not start:
+  "Multiple beans of type AuthenticationCache"). It is an applicationSecurityContext.xml because
+  web.xml loads every applicationContext.xml before every applicationSecurityContext.xml, so the
+  override does not depend on the order of the jars.
+  Arguments: maximum entries, idle time (s), life (s), clean-up interval (s), concurrency.
+-->
+<beans>
+  <bean id="authCacheLifecycleHandler" class="org.geoserver.security.auth.GuavaAuthenticationCacheImpl">
+    <constructor-arg index="0" value="5000"/>
+    <constructor-arg index="1" value="30"/>
+    <constructor-arg index="2" value="60"/>
+    <constructor-arg index="3" value="30"/>
+    <constructor-arg index="4" value="3"/>
+  </bean>
+</beans>

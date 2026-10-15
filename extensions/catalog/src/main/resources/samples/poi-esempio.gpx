@@ -1,0 +1,46 @@
+<?xml version="1.0"?>
+<gpx version="1.1" creator="Geoportal samples" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ogr="http://osgeo.org/gdal" xmlns="http://www.topografix.com/GPX/1/1" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
+<metadata>
+<bounds minlat="40.917644000000003" minlon="10.874511999999999" maxlat="45.802518999999997" maxlon="15.103327000000000"/>
+</metadata>
+<wpt lat="42.105372" lon="12.381245">
+  <name>Torre Civica</name>
+  <extensions>
+    <ogr:citta>Valverde</ogr:citta>
+    <ogr:categoria>monumento</ogr:categoria>
+    <ogr:anno>92</ogr:anno>
+  </extensions>
+</wpt>
+<wpt lat="44.612338" lon="10.874512">
+  <name>Cattedrale di Monteluce</name>
+  <extensions>
+    <ogr:citta>Monteluce</ogr:citta>
+    <ogr:categoria>chiesa</ogr:categoria>
+    <ogr:anno>1386</ogr:anno>
+  </extensions>
+</wpt>
+<wpt lat="40.917644" lon="15.103327">
+  <name>Castello di Borgo Alto</name>
+  <extensions>
+    <ogr:citta>Borgo Alto</ogr:citta>
+    <ogr:categoria>castello</ogr:categoria>
+    <ogr:anno>1279</ogr:anno>
+  </extensions>
+</wpt>
+<wpt lat="43.302185" lon="11.948761">
+  <name>Ponte dei Mulini</name>
+  <extensions>
+    <ogr:citta>Pietrachiara</ogr:citta>
+    <ogr:categoria>ponte</ogr:categoria>
+    <ogr:anno>1345</ogr:anno>
+  </extensions>
+</wpt>
+<wpt lat="45.802519" lon="12.913374">
+  <name>Piazza del Mercato</name>
+  <extensions>
+    <ogr:citta>Lagofondo</ogr:citta>
+    <ogr:categoria>piazza</ogr:categoria>
+    <ogr:anno>1200</ogr:anno>
+  </extensions>
+</wpt>
+</gpx>

@@ -1,0 +1,283 @@
+# SPDX-FileCopyrightText: 2026 Massimo Antonini
+#
+# Builds and tests the whole solution from the root (mvn verify): every extension on the bench of
+# @mosaikit/testing, then the distributions, against the latest snapshot of Mosaikit (ADR-0035 of
+# mosaikit/mosaikit). Every night too, so that a change of the kernel that breaks Geoportal shows
+# here the next morning. A tag vX.Y.Z publishes the packages and the distributions in a GitHub
+# release.
+name: Geoportal
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  schedule:
+    - cron: '30 4 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  solution:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      # The MK and EXT ids cited in depends and moved-to are checked against the requirements of
+      # Mosaikit and of mosaikit-ext: only their docs/requirements, outside the build, removed after.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: mosaikit/mosaikit
+          path: .requirements/mosaikit
+          sparse-checkout: docs/requirements
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: mosaikit/mosaikit-ext
+          path: .requirements/mosaikit-ext
+          # The shared requirements and those of each extension (ext-<name>/docs/requirements/).
+          sparse-checkout: '**/docs/requirements/'
+          sparse-checkout-cone-mode: false
+      - name: Requirements
+        env:
+          MOSAIKIT_REQUIREMENTS: .requirements/mosaikit/docs/requirements
+          MOSAIKIT_EXT_REQUIREMENTS: .requirements/mosaikit-ext/docs/requirements
+        run: |
+          python3 -m pip install --quiet pyyaml jsonschema
+          python3 docs/requirements/check.py
+          rm -rf .requirements
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4.9.1
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '24'
+      - name: Extension API, parent of extensions and distributions of Mosaikit
+        uses: mosaikit/.github/actions/kernel-api@main
+        with:
+          version: 0.1.0-SNAPSHOT
+          installation: 'true'
+      - run: npx --yes playwright@1 install --with-deps chromium
+      - name: Build and test the extensions and the distributions
+        run: mvn -B -ntp --fail-at-end verify
+      - name: The Helm chart of Geoportal (helm template)
+        # GP-937: the settings of the catalog reach the kernel through the chart of Mosaikit (MK-129).
+        run: bash distribution/cloud/test/chart-test.sh target/dist/geoportal-cloud/geoportal
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: geoportal
+          path: |
+            */*/target/*.zip
+            distribution/target/*.zip
+            */*/test-results/
+            */*/.mosaikit-bench/installation.log
+          retention-days: 7
+      - name: GitHub release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" */*/target/*.zip distribution/target/*.zip --verify-tag --generate-notes
+
+  geoserver:
+    # GP-334: the tests of the catalog against a real GeoServer (mvn test -Pgeoserver: PostGIS and the
+    # GeoServer image of distribution/server in Docker, through Testcontainers), and those of the
+    # loading of GP-937 against PostGIS and the loader sidecar (-Ppostgis). Apart from the job
+    # above, so that it stays fast: on pushes to main, every night, and on pull requests that touch
+    # the catalog or the server distribution. The image is built once per version of its Dockerfile
+    # and kept in the cache, so its extensions are not downloaded from SourceForge at every run.
+    runs-on: ubuntu-latest
+    if: github.event_name != 'push' || github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+      - name: Does the change concern GeoServer?
+        id: scope
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          run=true
+          if [ "$EVENT" = pull_request ] && \
+             ! git diff --name-only "$BASE" HEAD | grep -qE '^(extensions/catalog|distribution/server)/'; then
+            run=false
+          fi
+          echo "run=$run" >> "$GITHUB_OUTPUT"
+      - name: Cached GeoServer image
+        if: steps.scope.outputs.run == 'true'
+        id: image
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ${{ runner.temp }}/geoserver-image.tar
+          key: geoserver-image-${{ hashFiles('distribution/server/geoserver/**') }}
+      - name: GeoServer image of the server distribution
+        if: steps.scope.outputs.run == 'true'
+        env:
+          HIT: ${{ steps.image.outputs.cache-hit }}
+          TAR: ${{ runner.temp }}/geoserver-image.tar
+        run: |
+          if [ "$HIT" = true ]; then
+            docker load -i "$TAR"
+          else
+            docker build -t geoportal-server/geoserver:2.28.5 distribution/server/geoserver
+            docker save -o "$TAR" geoportal-server/geoserver:2.28.5
+          fi
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4.9.1
+        if: steps.scope.outputs.run == 'true'
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+      - name: Extension API, parent of extensions and distribution of Mosaikit
+        if: steps.scope.outputs.run == 'true'
+        uses: mosaikit/.github/actions/kernel-api@main
+        with:
+          version: 0.1.0-SNAPSHOT
+          installation: 'true'
+      - name: Tests of the catalog against GeoServer and PostGIS
+        if: steps.scope.outputs.run == 'true'
+        working-directory: extensions/catalog
+        run: mvn -B -ntp test -Pgeoserver,postgis -Dskip.npm=true
+      # GP-335, GP-308, GP-334, GP-936, GP-937, GP-118, GP-115: the bench suites that need GeoServer (GEOPORTAL_TEST_GEOSERVER=1), on the
+      # GeoServer and PostGIS of tests/geoserver/compose.yaml with the image built above.
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        if: steps.scope.outputs.run == 'true'
+        with:
+          node-version: '24'
+      - name: GeoServer and PostGIS of the bench
+        if: steps.scope.outputs.run == 'true'
+        working-directory: extensions/catalog
+        run: |
+          F=tests/geoserver/compose.yaml
+          docker compose -p geoportal-catalog-test -f $F up -d
+          for i in $(seq 1 90); do
+            docker compose -p geoportal-catalog-test -f $F logs geoserver-init | grep -q "GeoServer of Geoportal ready" && break
+            sleep 5
+          done
+          docker compose -p geoportal-catalog-test -f $F logs geoserver-init | tail -2
+      - name: Bench suites of the catalog against GeoServer
+        if: steps.scope.outputs.run == 'true'
+        working-directory: extensions/catalog
+        env:
+          GEOPORTAL_TEST_GEOSERVER: '1'
+        run: |
+          mvn -B -ntp package -DskipTests
+          npx --yes playwright@1 install --with-deps chromium
+          npx playwright test tests/access-rules.spec.ts tests/data-rules.spec.ts tests/geoserver.spec.ts \
+            tests/organization-events.spec.ts tests/editing.spec.ts tests/rasters.spec.ts \
+            tests/loading.spec.ts tests/publishing.spec.ts
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: failure()
+        with:
+          name: geoserver-tests
+          path: |
+            extensions/catalog/target/surefire-reports/
+            extensions/catalog/test-results/
+            extensions/catalog/.mosaikit-bench/installation.log
+          retention-days: 7
+
+  gateway:
+    # GP-336: the data gateway on the whole server stack (distribution/server: Geoportal, Keycloak,
+    # PostGIS, GeoServer, the loader and the gateway), with the test tests/gateway/gateway.e2e.ts of the
+    # catalog. As the job above: on pushes to main, every night, and on pull requests that touch the
+    # catalog or the server distribution.
+    runs-on: ubuntu-latest
+    if: github.event_name != 'push' || github.ref == 'refs/heads/main'
+    env:
+      COMPOSE_FILES: -p geoportal-f04-gp336 -f compose.yaml -f ../../../extensions/catalog/tests/gateway/compose.test.yaml
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+      - name: Does the change concern the gateway?
+        id: scope
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          run=true
+          if [ "$EVENT" = pull_request ] && \
+             ! git diff --name-only "$BASE" HEAD | grep -qE '^(extensions/catalog|distribution/server|\.github/workflows)/'; then
+            run=false
+          fi
+          echo "run=$run" >> "$GITHUB_OUTPUT"
+      - name: Cached GeoServer image
+        if: steps.scope.outputs.run == 'true'
+        id: image
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ${{ runner.temp }}/geoserver-image.tar
+          key: geoserver-image-${{ hashFiles('distribution/server/geoserver/**') }}
+      - name: GeoServer image of the server distribution
+        if: steps.scope.outputs.run == 'true'
+        env:
+          HIT: ${{ steps.image.outputs.cache-hit }}
+          TAR: ${{ runner.temp }}/geoserver-image.tar
+        run: |
+          if [ "$HIT" = true ]; then
+            docker load -i "$TAR"
+          else
+            docker build -t geoportal-server/geoserver:2.28.5 distribution/server/geoserver
+            docker save -o "$TAR" geoportal-server/geoserver:2.28.5
+          fi
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4.9.1
+        if: steps.scope.outputs.run == 'true'
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        if: steps.scope.outputs.run == 'true'
+        with:
+          node-version: '24'
+      - name: Extension API, parent of extensions and distributions of Mosaikit
+        if: steps.scope.outputs.run == 'true'
+        uses: mosaikit/.github/actions/kernel-api@main
+        with:
+          version: 0.1.0-SNAPSHOT
+          installation: 'true'
+      - name: The server distribution
+        if: steps.scope.outputs.run == 'true'
+        run: mvn -B -ntp package -DskipTests -Dskip.npm=true
+      - name: The server stack, with the settings of the test
+        if: steps.scope.outputs.run == 'true'
+        working-directory: target/dist/geoportal-server
+        run: |
+          cp ../../../extensions/catalog/tests/gateway/test.env .env
+          docker compose $COMPOSE_FILES build gateway geoportal loader
+          docker compose $COMPOSE_FILES up -d --no-build
+      - name: Playwright
+        if: steps.scope.outputs.run == 'true'
+        working-directory: extensions/catalog
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: Tests of the gateway (GP-336)
+        if: steps.scope.outputs.run == 'true'
+        working-directory: extensions/catalog
+        run: npx playwright test -c playwright.gateway.config.ts
+      - name: Mail of the server stack, with the mail catcher (profile mail)
+        if: steps.scope.outputs.run == 'true'
+        working-directory: target/dist/geoportal-server
+        run: bash ../../../distribution/server/test/mail-test.sh geoportal-f04-gp336
+      - name: Logs of the stack
+        if: failure() && steps.scope.outputs.run == 'true'
+        working-directory: target/dist/geoportal-server
+        run: COMPOSE_PROFILES=mail docker compose $COMPOSE_FILES logs --no-color > ../../../stack.log 2>&1 || true
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: failure()
+        with:
+          name: gateway-tests
+          path: |
+            stack.log
+            extensions/catalog/test-results/
+          retention-days: 7
+      - name: Down
+        if: always() && steps.scope.outputs.run == 'true'
+        working-directory: target/dist/geoportal-server
+        run: COMPOSE_PROFILES=mail docker compose $COMPOSE_FILES down -v || true

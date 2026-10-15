@@ -1,0 +1,21 @@
+<!-- SPDX-FileCopyrightText: 2026 Massimo Antonini -->
+<!-- GP-336, ADR-0007: personal access keys of Mosaikit for QGIS and other desktop clients (?authkey=).
+     The mapper asks the catalog for the NAME of the person of a key, through the internal door of the
+     gateway, which adds the key of its service identity; the catalog asks Mosaikit (services/check). An
+     unknown or revoked key answers nothing and the request stays anonymous: (\S+) needs a name. The person
+     and the roles come from the same views as for the gateway. -->
+<authKeyAuthentication>
+  <id>geoportal-authkey</id>
+  <name>geoportal-authkey</name>
+  <className>org.geoserver.security.GeoServerAuthenticationKeyFilter</className>
+  <authKeyMapperName>webServiceMapper</authKeyMapperName>
+  <authKeyParamName>authkey</authKeyParamName>
+  <userGroupServiceName>geoportal</userGroupServiceName>
+  <mapperParameters>
+    <entry><string>webServiceUrl</string><string>${GATEWAY_INTERNAL_URL}/authkey?key={key}</string></entry>
+    <entry><string>searchUser</string><string>^\s*(\S+)\s*$</string></entry>
+    <entry><string>connectTimeout</string><string>5</string></entry>
+    <entry><string>readTimeout</string><string>10</string></entry>
+    <entry><string>cacheTtlSeconds</string><string>30</string></entry>
+  </mapperParameters>
+</authKeyAuthentication>

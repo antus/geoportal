@@ -1,0 +1,236 @@
+# SPDX-FileCopyrightText: 2026 Massimo Antonini
+#
+# The data gateway of Geoportal (GP-336, ADR-0006, ADR-0016, ADR-0022). The nginx image fills it from the
+# environment at start:
+#   GATEWAY_MOSAIKIT           Geoportal, host:port                   (geoportal:8080)
+#   GATEWAY_GEOSERVER          GeoServer, host:port                   (geoserver:8080)
+#   GATEWAY_GEOSERVER_NETWORK  where GeoServer calls from, for the internal door (its network)
+#   GATEWAY_SERVICE_KEY        the key (mks_...) of the service identity of the gateway in Geoportal,
+#                              given the API catalog and the endpoint check-key; a secret, never here
+#   GATEWAY_MAX_BODY           the largest upload to Geoportal, as the kernel's (GEOPORTAL_MAX_UPLOAD)
+#   NGINX_LOCAL_RESOLVERS      the resolver of the container (set by the image)
+#
+# Three doors:
+#   :80    people, the only one published: Geoportal, and the geodata at /gw/ (on the same origin, so
+#          that map libraries send the session cookie by themselves)
+#   :8480  the administration of GeoServer and the calls of the catalog to its REST API; published on
+#          127.0.0.1 only
+#   :8081  the calls of GeoServer to Geoportal (the AuthKey mapper), on the network of GeoServer only
+#
+# GeoServer accepts the name header only from this container (Tomcat's RemoteAddrValve on a fixed
+# address, ADR-0016), and every door here strips or overwrites it.
+
+resolver ${NGINX_LOCAL_RESOLVERS} valid=10s ipv6=off;
+
+js_path /etc/nginx/njs;
+js_import gateway from gateway.js;
+js_fetch_timeout 10s;
+# The go-ahead of each person (session or key) and organization, ten seconds; and the requests let
+# through since the last go-ahead, which the next one brings to the quota of the organization (an hour
+# without requests forgets them).
+js_shared_dict_zone zone=gw_decisions:4m timeout=10s evict;
+js_shared_dict_zone zone=gw_served:1m type=number timeout=1h evict;
+js_var $gw_check_url http://${GATEWAY_MOSAIKIT}/api/v1/ext/catalog/gateway/check;
+
+map $http_cookie $mk_session {
+    default "";
+    "~(?:^|;\s*)mosaikit-session=(?<mk_cookie>[^;]+)" $mk_cookie;
+}
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    ""      "";
+}
+# The scheme people use, also behind a proxy with HTTPS in front of the gateway.
+map $http_x_forwarded_proto $gw_proto {
+    default $http_x_forwarded_proto;
+    ""      $scheme;
+}
+map $gw_layer $gw_layer_path {
+    ""      "";
+    default "$gw_layer/";
+}
+# Only the read requests of the OGC services pass, as at the gate of the catalog (ADR-0020); editing
+# through WFS-T comes with the rules that allow it.
+map $arg_request $gw_read {
+    default 0;
+    "~*^(GetCapabilities|GetMap|GetFeatureInfo|GetLegendGraphic|DescribeLayer|DescribeFeatureType|GetFeature|GetPropertyValue|DescribeStoredQueries|ListStoredQueries|GetTile|DescribeCoverage|GetCoverage)$" 1;
+}
+# Nothing that makes GeoServer fetch an address: no style or service by reference.
+map $args $gw_by_reference {
+    default 0;
+    "~*(^|&)(sld|sld_body|remote_ows_type|remote_ows_url|styles_url)=" 1;
+}
+
+# --- People --------------------------------------------------------------------------------------------
+server {
+    listen 80 default_server;
+    client_max_body_size ${GATEWAY_MAX_BODY};
+    # A body over GATEWAY_MAX_BODY: a problem detail with the limit, as Geoportal answers (issue #40).
+    error_page 413 = @gw_too_large;
+    # The variables of the log of data requests are empty for the other requests.
+    uninitialized_variable_warn off;
+
+    # Geoportal: the shell, the API, sign-in, real time.
+    location / {
+        set $mk http://${GATEWAY_MOSAIKIT};
+        proxy_pass $mk;
+        proxy_http_version 1.1;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto $gw_proto;
+        proxy_set_header X-Forwarded-Host $http_host;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        proxy_set_header sec-username "";
+        proxy_buffering off;
+        proxy_request_buffering off;
+        proxy_read_timeout 1h;
+    }
+
+    location @gw_too_large {
+        default_type application/problem+json;
+        add_header Cache-Control "no-store" always;
+        return 413 '{"type":"about:blank","title":"Content Too Large","status":413,"detail":"The request is larger than the ${GATEWAY_MAX_BODY} this installation accepts."}\n';
+    }
+
+    # The geodata of an organization, with the session of Geoportal or a personal key (QGIS):
+    #   /gw/ows/<organization>/<wms|wfs|wcs|ows|gwc/service/wmts>          the workspace
+    #   /gw/ows/<organization>/<layer>/<service>                          one layer
+    #   /gw/ows/<organization>/<workspace>/[<layer>/]<service>            as GeoServer writes them back
+    location ~ "^/gw/ows/(?<gw_org>[a-z0-9][a-z0-9-]*)/(?:(?<gw_ws>org_[0-9a-f]{32})/)?(?:(?<gw_layer>[a-z][a-z0-9_]{0,62})/)?(?<gw_svc>wms|wfs|wcs|ows|gwc/service/wmts)$" {
+        limit_except GET HEAD { deny all; }
+        if ($gw_read = 0) {
+            return 400 "Only the read requests of WMS, WFS, WCS and WMTS pass here (request=GetCapabilities, GetMap, GetFeature, GetTile, ...).\n";
+        }
+        if ($gw_by_reference = 1) {
+            return 400 "Styles and services by reference are not accepted.\n";
+        }
+        # The key of a desktop client, kept for the go-ahead (a subrequest has no arguments of its own).
+        set $gw_authkey $arg_authkey;
+        auth_request /_gw_check;
+        auth_request_set $gw_user $sent_http_x_geoportal_user;
+        auth_request_set $gw_account $sent_http_x_geoportal_account;
+        auth_request_set $gw_workspace $sent_http_x_geoportal_workspace;
+        auth_request_set $gw_org_id $sent_http_x_geoportal_organization;
+        auth_request_set $gw_refusal $sent_http_x_geoportal_refusal;
+        auth_request_set $gw_cache $sent_http_x_geoportal_cache;
+        error_page 401 = @gw_unauthorized;
+        error_page 403 = @gw_forbidden;
+        add_header X-Geoportal-Gateway $gw_cache always;
+
+        set $gs http://${GATEWAY_GEOSERVER};
+        proxy_pass $gs/geoserver/$gw_workspace/$gw_layer_path$gw_svc$is_args$args;
+        proxy_http_version 1.1;
+        proxy_set_header Host $http_host;
+        # GeoServer writes its addresses back as the gateway's ("use headers for proxy URL").
+        proxy_set_header X-Forwarded-Proto $gw_proto;
+        proxy_set_header X-Forwarded-Host $http_host;
+        proxy_set_header X-Forwarded-Path /gw/ows/$gw_org;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        # ALWAYS set: the header a client sends never passes. Empty with a key, which GeoServer's
+        # AuthKey filter checks by itself.
+        proxy_set_header sec-username $gw_user;
+        proxy_set_header X-Geoportal-Organization $gw_org_id;
+        proxy_set_header Cookie "";
+        proxy_set_header Authorization "";
+        proxy_set_header Accept-Encoding "";
+        proxy_hide_header Set-Cookie;
+        proxy_read_timeout 300s;
+    }
+
+    location = /_gw_check {
+        internal;
+        js_content gateway.check;
+    }
+
+    location @gw_unauthorized {
+        default_type application/problem+json;
+        add_header Cache-Control "no-store" always;
+        return 401 '{"type":"about:blank","title":"Unauthorized","status":401,"detail":"Sign in to Geoportal, or add authkey=<a personal access key> to the address."}\n';
+    }
+
+    location @gw_forbidden {
+        default_type application/problem+json;
+        add_header Cache-Control "no-store" always;
+        return 403 '{"type":"about:blank","title":"Forbidden","status":403,"detail":"$gw_refusal"}\n';
+    }
+
+    # The published layer of a dataset shared with a link of Geoportal, for people without an account:
+    # /gw/link/<secret>/<dataset>/<service>. The gate of the catalog checks the link and serves only the
+    # read requests of that layer; the secret travels as the header map clients cannot send.
+    location ~ "^/gw/link/(?<gw_secret>[A-Za-z0-9_-]{16,128})/(?<gw_dataset>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/(?<gw_link_svc>wms|wfs|ows|gwc/service/wmts)$" {
+        limit_except GET HEAD { deny all; }
+        set $gw_account "link";
+        set $gw_cache "-";
+        set $mk http://${GATEWAY_MOSAIKIT};
+        proxy_pass $mk/api/v1/ext/catalog/shared-layers/$gw_dataset/ogc/$gw_link_svc$is_args$args;
+        proxy_http_version 1.1;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto $gw_proto;
+        proxy_set_header X-Forwarded-Host $http_host;
+        proxy_set_header X-Mosaikit-Link $gw_secret;
+        proxy_set_header X-Mosaikit-Link-Password $http_x_mosaikit_link_password;
+        proxy_set_header X-Gateway-Base $gw_proto://$http_host/gw/link/$gw_secret/$gw_dataset;
+        proxy_set_header sec-username "";
+        proxy_set_header Cookie "";
+        proxy_set_header Authorization "";
+        proxy_read_timeout 300s;
+    }
+
+    location /gw/ {
+        default_type application/problem+json;
+        return 404 '{"type":"about:blank","title":"Not Found","status":404,"detail":"Data addresses are /gw/ows/<organization>/[<layer>/]<wms|wfs|wcs|ows|gwc/service/wmts>."}\n';
+    }
+
+    location = /_gw_health {
+        access_log off;
+        return 204;
+    }
+}
+
+# --- The administration of GeoServer and the calls of the catalog --------------------------------------
+server {
+    listen 8480;
+    client_max_body_size 1g;
+
+    location /geoserver/ {
+        set $gs http://${GATEWAY_GEOSERVER};
+        proxy_pass $gs;
+        proxy_http_version 1.1;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $http_host;
+        proxy_set_header X-Forwarded-Path /geoserver;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header sec-username "";
+        proxy_request_buffering off;
+        proxy_read_timeout 600s;
+    }
+
+    location = / {
+        return 302 /geoserver/web/;
+    }
+}
+
+# --- The calls of GeoServer to Geoportal ---------------------------------------------------------------
+server {
+    listen 8081;
+    allow ${GATEWAY_GEOSERVER_NETWORK};
+    deny all;
+
+    # The web service mapper of GeoServer's AuthKey filter cannot send credentials: the gateway adds the
+    # key of its service identity, and Geoportal answers the person of a personal key.
+    location = /authkey {
+        set $mk http://${GATEWAY_MOSAIKIT};
+        proxy_pass $mk/api/v1/ext/catalog/gateway/authkey$is_args$args;
+        proxy_http_version 1.1;
+        proxy_set_header Authorization "Bearer ${GATEWAY_SERVICE_KEY}";
+        proxy_set_header Cookie "";
+        proxy_set_header sec-username "";
+    }
+
+    location / {
+        return 404;
+    }
+}

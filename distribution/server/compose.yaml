@@ -1,0 +1,250 @@
+# SPDX-FileCopyrightText: 2026 Massimo Antonini
+#
+# Geoportal with PostGIS, GeoServer and Keycloak, ready to use:
+#
+#   docker compose up -d --build
+#
+# Geoportal: http://localhost:8080        (admin / GEOPORTAL_ADMIN_PASSWORD of .env), through the gateway,
+#            with the geodata at /gw/ (GP-336)
+# Keycloak:  http://localhost:8180        (admin / KEYCLOAK_ADMIN_PASSWORD)
+# GeoServer: http://127.0.0.1:8280/geoserver (gsadmin / GEOSERVER_ADMIN_PASSWORD), this computer only,
+#            through the administration door of the gateway
+# Mails:     http://127.0.0.1:8025      the mail catcher, with COMPOSE_PROFILES=mail (demonstrations)
+# The ports are GEOPORTAL_PORT, KEYCLOAK_PORT, GEOSERVER_PORT and MAIL_CATCHER_PORT of .env. See README.md.
+
+name: geoportal-server
+
+services:
+  postgres:
+    # PostgreSQL 18 with PostGIS: the databases of Geoportal, Keycloak and GeoServer.
+    image: postgis/postgis:18-3.6
+    environment:
+      POSTGRES_USER: mosaikit
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set it in .env}
+      POSTGRES_DB: mosaikit
+      KEYCLOAK_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?set it in .env}
+      GEOSERVER_DB_PASSWORD: ${GEOSERVER_DB_PASSWORD:?set it in .env}
+    volumes:
+      - postgres-data:/var/lib/postgresql
+      # The databases and users of Keycloak and GeoServer, at the first start.
+      - ./postgres/init-keycloak.sh:/docker-entrypoint-initdb.d/20-init-keycloak.sh:ro
+      - ./postgres/init-geoserver.sh:/docker-entrypoint-initdb.d/30-init-geoserver.sh:ro
+    networks: [default, loader, geodata]
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U mosaikit -d mosaikit && pg_isready -U geoserver -d geodata']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.7.4
+    # Development mode (HTTP, relaxed checks). For production see README.md.
+    command: ['start-dev', '--http-port=8080']
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?set it in .env}
+      # Service account with which Geoportal creates the realm of each new organization.
+      KC_BOOTSTRAP_ADMIN_CLIENT_ID: mosaikit-admin
+      KC_BOOTSTRAP_ADMIN_CLIENT_SECRET: ${KEYCLOAK_ADMIN_CLIENT_SECRET:?set it in .env}
+      KC_HOSTNAME: ${KEYCLOAK_PUBLIC_URL:-http://localhost:8180}
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: 'true'
+      KC_HEALTH_ENABLED: 'true'
+    ports:
+      - '${KEYCLOAK_PORT:-8180}:8080'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          "exec 3<>/dev/tcp/127.0.0.1/9000 && printf 'GET /health/ready HTTP/1.0\r\n\r\n' >&3 && grep -q UP <&3",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+  geoserver:
+    # GeoFence (rules in the database geoserver), Importer and AuthKey inside the image.
+    build: ./geoserver
+    image: geoportal-server/geoserver:2.28.5
+    environment:
+      # Never "admin", the bootstrap administrator of Geoportal (ADR-0016).
+      GEOSERVER_ADMIN_USER: ${GEOSERVER_ADMIN_USER:-gsadmin}
+      GEOSERVER_ADMIN_PASSWORD: ${GEOSERVER_ADMIN_PASSWORD:?set it in .env}
+      GEOFENCE_DB_HOST: postgres
+      GEOFENCE_DB_NAME: geoserver
+      GEOFENCE_DB_USER: geoserver
+      GEOFENCE_DB_PASSWORD: ${GEOSERVER_DB_PASSWORD}
+      SKIP_DEMO_DATA: 'true'
+      EXTRA_JAVA_OPTS: '-Xms256m -Xmx1g'
+      # Behind the gateway (GP-336, ADR-0016): Tomcat lets in only the gateway, which names the person
+      # in sec-username; the roles come from the published views of Geoportal through the reader login;
+      # personal keys (?authkey=) are checked by asking Geoportal through the internal door of the
+      # gateway.
+      GEOPORTAL_GATEWAY_ADDRESS: ${GEOSERVER_NETWORK:-10.231.0}.10
+      GEOPORTAL_GATEWAY_INTERNAL: http://gateway:8081
+      GEOPORTAL_READER_URL: jdbc:postgresql://postgres:5432/mosaikit
+      GEOPORTAL_READER_USER: geoserver_reader
+      GEOPORTAL_READER_PASSWORD: ${GEOSERVER_READER_PASSWORD:?set it in .env}
+    # No port: people, QGIS and the catalog reach GeoServer through the gateway only.
+    volumes:
+      - geoserver-data:/opt/geoserver_data
+    networks:
+      geoserver:
+        ipv4_address: ${GEOSERVER_NETWORK:-10.231.0}.20
+      geodata: {}
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -fs -o /dev/null http://localhost:8080/geoserver/web/']
+      interval: 10s
+      timeout: 5s
+      retries: 60
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  gateway:
+    # The data gateway (GP-336, ADR-0022): nginx with auth_request in front of Geoportal and GeoServer,
+    # on one origin. Geoportal gives the go-ahead of each data request, kept ten seconds.
+    build: ./gateway
+    image: geoportal-server/gateway:1.27.5
+    environment:
+      GATEWAY_MOSAIKIT: geoportal:8080
+      GATEWAY_GEOSERVER: geoserver:8080
+      GATEWAY_GEOSERVER_NETWORK: ${GEOSERVER_NETWORK:-10.231.0}.0/24
+      # The key of the service identity "gateway" of Geoportal (API catalog, endpoint check-key), for
+      # the personal keys of QGIS: see README.md. Without it those keys are refused.
+      GATEWAY_SERVICE_KEY: ${GATEWAY_SERVICE_KEY:-}
+      GATEWAY_MAX_BODY: ${GEOPORTAL_MAX_UPLOAD:-1G}
+    ports:
+      - '${GEOPORTAL_PORT:-8080}:80'
+      # The administration of GeoServer, this computer only.
+      - '127.0.0.1:${GEOSERVER_PORT:-8280}:8480'
+    networks:
+      default: {}
+      geoserver:
+        ipv4_address: ${GEOSERVER_NETWORK:-10.231.0}.10
+    depends_on: [geoserver, geoportal]
+    restart: unless-stopped
+
+  geoserver-init:
+    image: curlimages/curl:8.16.0
+    entrypoint: ['sh', '/prepare.sh']
+    environment:
+      GEOSERVER_ADMIN_USER: ${GEOSERVER_ADMIN_USER:-gsadmin}
+      GEOSERVER_ADMIN_PASSWORD: ${GEOSERVER_ADMIN_PASSWORD}
+      GEOSERVER_URL: http://gateway:8480/geoserver
+      GEOPORTAL_GATEWAY: 'true'
+    volumes:
+      - ./geoserver/init/prepare.sh:/prepare.sh:ro
+    depends_on: [gateway]
+    restart: 'no'
+
+  loader:
+    # GDAL in a sidecar (ADR-0019): loads the files uploaded to the catalog into PostGIS and converts
+    # rasters into COG. No port, and on the internal network only: only Geoportal calls it, and it
+    # reaches only Geoportal (the uploads, through signed links) and PostGIS.
+    build: ./loader
+    image: geoportal-server/loader:2.0.0
+    environment:
+      LOADER_WORKERS: '2'
+    volumes:
+      - loader-work:/var/lib/loader/jobs
+    networks: [loader]
+    mem_limit: 1g
+    restart: unless-stopped
+
+  geoportal:
+    build:
+      # The installation next to this directory (../geoportal).
+      context: ..
+      dockerfile: geoportal-server/Dockerfile
+    image: geoportal-server/geoportal:local
+    environment:
+      QUARKUS_DATASOURCE_JDBC_URL: jdbc:postgresql://postgres:5432/mosaikit
+      QUARKUS_DATASOURCE_USERNAME: mosaikit
+      QUARKUS_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      MOSAIKIT_BOOTSTRAP_ADMIN_PASSWORD: ${GEOPORTAL_ADMIN_PASSWORD:?set it in .env}
+      MOSAIKIT_IDENTITY_KEYCLOAK_URL: ${KEYCLOAK_PUBLIC_URL:-http://localhost:8180}
+      MOSAIKIT_IDENTITY_KEYCLOAK_INTERNAL_URL: http://keycloak:8080
+      MOSAIKIT_IDENTITY_ADMIN_CLIENT_ID: mosaikit-admin
+      MOSAIKIT_IDENTITY_ADMIN_CLIENT_SECRET: ${KEYCLOAK_ADMIN_CLIENT_SECRET}
+      MOSAIKIT_EXTENSIONS_SIGNATURES: ${MOSAIKIT_EXTENSIONS_SIGNATURES:-required}
+      # The key that encrypts the credentials of organizations (such as those of GeoServer, which the
+      # catalog reads) and signs the links to files (which the loader follows).
+      MOSAIKIT_SECRETS_MASTER_KEY: ${GEOPORTAL_MASTER_KEY:?set it in .env}
+      # Uploads of geographic data can be large: the loader streams them (GP-937).
+      MOSAIKIT_FILES_MAX_SIZE: ${GEOPORTAL_MAX_UPLOAD:-1G}
+      QUARKUS_HTTP_LIMITS_MAX_BODY_SIZE: ${GEOPORTAL_MAX_UPLOAD:-1G}
+      # The loader of the catalog, and Geoportal as the loader reaches it for the signed links.
+      GEOPORTAL_CATALOG_LOADER_URL: http://loader:8090
+      GEOPORTAL_CATALOG_LOADER_SOURCE_URL: http://geoportal:8080
+      # GP-336: the data gateway is installed; the catalog reaches GeoServer through its administration
+      # door, and the reader login of the published views is created at start for GeoServer.
+      GEOPORTAL_GATEWAY_ENABLED: 'true'
+      GEOPORTAL_GEOSERVER_URL: http://gateway:8480/geoserver
+      MOSAIKIT_DATABASE_PUBLISHED_VIEWS_LOGIN: geoserver_reader
+      MOSAIKIT_DATABASE_PUBLISHED_VIEWS_PASSWORD: ${GEOSERVER_READER_PASSWORD}
+      # The mail server of the confirmations of registrations (README.md, "Mail").
+      MOSAIKIT_ACCOUNTS_CONFIRM_EMAIL: ${GEOPORTAL_CONFIRM_EMAIL:-true}
+      MOSAIKIT_PUBLIC_URL: ${GEOPORTAL_PUBLIC_URL:-}
+      QUARKUS_MAILER_HOST: ${MAIL_HOST:-localhost}
+      QUARKUS_MAILER_PORT: ${MAIL_PORT:-587}
+      QUARKUS_MAILER_USERNAME: ${MAIL_USERNAME:-}
+      QUARKUS_MAILER_PASSWORD: ${MAIL_PASSWORD:-}
+      QUARKUS_MAILER_START_TLS: ${MAIL_START_TLS:-REQUIRED}
+      QUARKUS_MAILER_TLS: ${MAIL_TLS:-false}
+      QUARKUS_MAILER_FROM: ${MAIL_FROM:-Geoportal <no-reply@localhost>}
+    # No port: people reach Geoportal through the gateway, on the same origin as the geodata.
+    networks: [default, loader]
+    volumes:
+      # The files of organizations, uploads of the catalog included.
+      - geoportal-files:/opt/mosaikit/files
+    depends_on:
+      postgres:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+    restart: unless-stopped
+
+  mailcatcher:
+    # Only with the profile "mail" (COMPOSE_PROFILES=mail in .env): Mailpit keeps every mail Geoportal
+    # sends, without delivering any, for demonstrations and reviews; never for real people.
+    image: axllent/mailpit:v1.31.3
+    profiles: [mail]
+    environment:
+      MP_MAX_MESSAGES: '500'
+      MP_SMTP_AUTH_ACCEPT_ANY: 'true'
+      MP_SMTP_AUTH_ALLOW_INSECURE: 'true'
+    ports:
+      # Its pages and API, this computer only; SMTP on 1025 inside the stack.
+      - '127.0.0.1:${MAIL_CATCHER_PORT:-8025}:8025'
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+  geoserver-data:
+  geoportal-files:
+  loader-work:
+
+networks:
+  default:
+  # Geoportal, PostGIS and the loader, without a way out.
+  loader:
+    internal: true
+  # The gateway and GeoServer only, at fixed addresses: the gateway's is the one Tomcat lets in.
+  geoserver:
+    internal: true
+    ipam:
+      config:
+        - subnet: ${GEOSERVER_NETWORK:-10.231.0}.0/24
+  # GeoServer and PostgreSQL.
+  geodata:
+    internal: true

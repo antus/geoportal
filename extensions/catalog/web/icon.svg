@@ -1,0 +1,7 @@
+<!-- SPDX-FileCopyrightText: 2026 Massimo Antonini -->
+<!-- The icon of the catalog: a database, the line icon of the Geoportal mockup on a tile of the brand color. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <rect width="24" height="24" rx="6" fill="#444791"/>
+  <g transform="translate(4.5 4.5) scale(0.625)" fill="none" stroke="#ffffff" stroke-width="2.6"
+     stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></g>
+</svg>

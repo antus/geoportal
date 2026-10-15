@@ -1,0 +1,25 @@
+{{- /* SPDX-FileCopyrightText: 2026 Massimo Antonini */ -}}
+{{- /*
+The settings of the catalog name the loader of this release and the kernel of this release (GP-937):
+values cannot be templates, so their defaults fit the release "geoportal", and a release with another
+name, or the loader turned off, stops here with what to set instead of a catalog that submits jobs to
+nothing.
+*/ -}}
+{{- $extensions := .Values.mosaikit.extensions | default dict -}}
+{{- $catalog := index $extensions "dev.geoportal.catalog" | default dict -}}
+{{- $settings := $catalog.settings | default dict -}}
+{{- $where := "mosaikit.extensions.dev.geoportal.catalog.settings" -}}
+{{- $url := index $settings "geoportal.catalog.loader.url" -}}
+{{- $source := index $settings "geoportal.catalog.loader.source-url" -}}
+{{- if .Values.loader.enabled -}}
+{{- $expected := printf "http://%s:8090" (include "geoportal.loader.name" .) -}}
+{{- if ne (toString $url) $expected -}}
+{{- fail (printf "%s: geoportal.catalog.loader.url is %q, but the loader of this release is %s: set it to that address, or turn the loader off (loader.enabled=false)" $where (toString $url) $expected) -}}
+{{- end -}}
+{{- $kernel := printf "http://%s-mosaikit" .Release.Name -}}
+{{- if not (regexMatch (printf "^%s(:[0-9]+)?/?$" (regexQuoteMeta $kernel)) (toString $source)) -}}
+{{- fail (printf "%s: geoportal.catalog.loader.source-url is %q, but the kernel of this release is %s: set it to that address" $where (toString $source) $kernel) -}}
+{{- end -}}
+{{- else if $url -}}
+{{- fail (printf "%s: geoportal.catalog.loader.url is %q, but the loader is off (loader.enabled=false): set it to \"\", and the catalog loads with its own readers" $where (toString $url)) -}}
+{{- end -}}

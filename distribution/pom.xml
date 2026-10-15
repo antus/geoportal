@@ -1,0 +1,375 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SPDX-FileCopyrightText: 2026 Massimo Antonini
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <!--
+      The distributions of Geoportal, each the Mosaikit one of the same kind with the extensions and
+      the branding of Geoportal (signed with a key of this build) and the geospatial stack:
+
+      in target/dist at the root of the repository:
+
+        geoportal                      the installation: Mosaikit, the extensions, the Geoportal theme
+        geoportal-server               Docker Compose: PostGIS, GeoServer (GeoFence, Importer), Keycloak
+        geoportal-cloud                Helm: the Mosaikit chart with GeoServer
+        geoportal-portable             with -Pportable: archives that need nothing installed
+
+      and the same as zips in distribution/target, attached to the build (classifiers installation, server, cloud).
+      Built after the extensions by the aggregator at the root (mvn install there).
+    -->
+    <groupId>dev.geoportal</groupId>
+    <artifactId>geoportal-distributions</artifactId>
+    <version>2.0.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+    <name>Geoportal distributions</name>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <mosaikit.version>0.1.0-SNAPSHOT</mosaikit.version>
+        <mosaikit.directory>${project.build.directory}/mosaikit</mosaikit.directory>
+        <!-- At the root, where people look for what the build makes; mvn clean here deletes it. -->
+        <dist.directory>${project.basedir}/../target/dist</dist.directory>
+        <keys.directory>${project.build.directory}/keys</keys.directory>
+        <!-- Platforms of the portable archives (-Pportable), any of linux-x64, linux-arm64,
+             windows-x64, macos-x64, macos-arm64. -->
+        <portable.platforms>windows-x64,linux-x64</portable.platforms>
+        <!-- The bash that runs the build of the portable archives: on Windows, Git Bash (profile
+             windows below), never the bash of WSL that "bash" finds there. -->
+        <portable.bash>bash</portable.bash>
+        <!-- true: build on the Mosaikit snapshot of the local Maven repository as it is, without
+             bringing it up to the published one (tools/MosaikitSnapshot.java). -->
+        <mosaikit.snapshot.skip>false</mosaikit.snapshot.skip>
+    </properties>
+
+    <dependencies>
+        <!-- The packages of Geoportal: listed so that the reactor builds them first. -->
+        <dependency>
+            <groupId>dev.geoportal</groupId>
+            <artifactId>geoportal-catalog</artifactId>
+            <version>${project.version}</version>
+            <type>pom</type>
+        </dependency>
+        <dependency>
+            <groupId>dev.geoportal</groupId>
+            <artifactId>geoportal-maps</artifactId>
+            <version>${project.version}</version>
+            <type>pom</type>
+        </dependency>
+        <dependency>
+            <groupId>dev.geoportal</groupId>
+            <artifactId>geoportal-dashboards</artifactId>
+            <version>${project.version}</version>
+            <type>pom</type>
+        </dependency>
+        <dependency>
+            <groupId>dev.geoportal</groupId>
+            <artifactId>geoportal-processes</artifactId>
+            <version>${project.version}</version>
+            <type>pom</type>
+        </dependency>
+        <dependency>
+            <groupId>dev.geoportal</groupId>
+            <artifactId>geoportal-theme</artifactId>
+            <version>${project.version}</version>
+            <type>pom</type>
+        </dependency>
+        <!-- PackageSigningTool, which needs nothing but the JDK. -->
+        <dependency>
+            <groupId>io.github.mosaikit</groupId>
+            <artifactId>mosaikit-kernel-api</artifactId>
+            <version>${mosaikit.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>*</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <!-- target/dist at the root is written by this module, so this module deletes it. -->
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-clean-plugin</artifactId>
+                <version>3.5.0</version>
+                <configuration>
+                    <filesets>
+                        <fileset>
+                            <directory>${dist.directory}</directory>
+                        </fileset>
+                    </filesets>
+                </configuration>
+            </plugin>
+            <plugin>
+                <!-- The distributions of Mosaikit this one starts from, in target/mosaikit. -->
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>3.8.1</version>
+                <executions>
+                    <execution>
+                        <id>mosaikit-distributions</id>
+                        <phase>prepare-package</phase>
+                        <goals>
+                            <goal>unpack</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${mosaikit.directory}</outputDirectory>
+                            <overWriteSnapshots>true</overWriteSnapshots>
+                            <artifactItems>
+                                <artifactItem>
+                                    <groupId>io.github.mosaikit</groupId>
+                                    <artifactId>mosaikit-distributions</artifactId>
+                                    <version>${mosaikit.version}</version>
+                                    <type>zip</type>
+                                    <classifier>installation</classifier>
+                                </artifactItem>
+                                <artifactItem>
+                                    <groupId>io.github.mosaikit</groupId>
+                                    <artifactId>mosaikit-distributions</artifactId>
+                                    <version>${mosaikit.version}</version>
+                                    <type>zip</type>
+                                    <classifier>portable-tools</classifier>
+                                </artifactItem>
+                                <artifactItem>
+                                    <groupId>io.github.mosaikit</groupId>
+                                    <artifactId>mosaikit-distributions</artifactId>
+                                    <version>${mosaikit.version}</version>
+                                    <type>zip</type>
+                                    <classifier>docker</classifier>
+                                </artifactItem>
+                                <artifactItem>
+                                    <groupId>io.github.mosaikit</groupId>
+                                    <artifactId>mosaikit-distributions</artifactId>
+                                    <version>${mosaikit.version}</version>
+                                    <type>zip</type>
+                                    <classifier>helm</classifier>
+                                    <outputDirectory>${mosaikit.directory}/charts</outputDirectory>
+                                </artifactItem>
+                            </artifactItems>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <execution>
+                        <id>distributions</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <pathconvert property="signing.classpath" refid="maven.compile.classpath"/>
+                                <property name="installation" value="${dist.directory}/geoportal"/>
+
+                                <!-- The installation: the one of Mosaikit, with the settings and the
+                                     extensions of Geoportal. -->
+                                <delete dir="${installation}"/>
+                                <copy todir="${installation}">
+                                    <fileset dir="${mosaikit.directory}/mosaikit"/>
+                                </copy>
+                                <copy file="${project.basedir}/install/application.properties"
+                                      todir="${installation}/config" overwrite="true"/>
+                                <copy file="${project.basedir}/install/README.md"
+                                      todir="${installation}" overwrite="true"/>
+                                <copy todir="${installation}/extensions" flatten="true">
+                                    <fileset dir="${project.basedir}/..">
+                                        <include name="extensions/*/target/*-${project.version}.zip"/>
+                                        <include name="branding/*/target/*-${project.version}.zip"/>
+                                    </fileset>
+                                </copy>
+                                <chmod file="${installation}/mosaikit" perm="755"/>
+
+                                <!-- Signed with a key of this build, which the installation trusts:
+                                     the distributions accept them with signatures=required too. -->
+                                <delete dir="${keys.directory}"/>
+                                <java classname="dev.mosaikit.kernel.api.signature.PackageSigningTool"
+                                      classpath="${signing.classpath}" fork="true" failonerror="true">
+                                    <arg value="keygen"/>
+                                    <arg value="${keys.directory}"/>
+                                    <arg value="geoportal-build"/>
+                                </java>
+                                <apply executable="${java.home}/bin/java" parallel="true" failonerror="true">
+                                    <arg value="-cp"/>
+                                    <arg value="${signing.classpath}"/>
+                                    <arg value="dev.mosaikit.kernel.api.signature.PackageSigningTool"/>
+                                    <arg value="sign"/>
+                                    <arg value="${keys.directory}/geoportal-build"/>
+                                    <fileset dir="${installation}/extensions" includes="*.zip"/>
+                                </apply>
+                                <java classname="dev.mosaikit.kernel.api.signature.PackageSigningTool"
+                                      classpath="${signing.classpath}" fork="true" failonerror="true">
+                                    <arg value="trust"/>
+                                    <arg value="${keys.directory}/geoportal-build"/>
+                                    <arg value="${installation}/config/trusted-keys"/>
+                                </java>
+                                <zip destfile="${project.build.directory}/geoportal-installation-${project.version}.zip">
+                                    <zipfileset dir="${installation}" prefix="geoportal" excludes="mosaikit"/>
+                                    <zipfileset dir="${installation}" prefix="geoportal" includes="mosaikit"
+                                                filemode="755"/>
+                                </zip>
+
+                                <!-- Server: Docker Compose next to the installation, which its image
+                                     copies. Not deleted first: a running compose keeps it open, and
+                                     .env and the data must survive a rebuild. -->
+                                <property name="server" value="${dist.directory}/geoportal-server"/>
+                                <copy todir="${server}" overwrite="true">
+                                    <fileset dir="${project.basedir}/server" excludes="test/**"/>
+                                </copy>
+                                <copy file="${mosaikit.directory}/mosaikit-docker/postgres/init-keycloak.sh"
+                                      todir="${server}/postgres" overwrite="true"/>
+                                <copy file="${project.basedir}/server/env.example" tofile="${server}/.env"
+                                      overwrite="false"/>
+                                <zip destfile="${project.build.directory}/geoportal-server-${project.version}.zip">
+                                    <zipfileset dir="${installation}" prefix="geoportal" excludes="mosaikit"/>
+                                    <zipfileset dir="${installation}" prefix="geoportal" includes="mosaikit"
+                                                filemode="755"/>
+                                    <zipfileset dir="${server}" prefix="geoportal-server" excludes=".env"/>
+                                </zip>
+
+                                <!-- Cloud: the Helm chart of Geoportal, with the one of Mosaikit as a
+                                     subchart. -->
+                                <property name="cloud" value="${dist.directory}/geoportal-cloud"/>
+                                <delete dir="${cloud}"/>
+                                <copy todir="${cloud}">
+                                    <fileset dir="${project.basedir}/cloud" excludes="test/**"/>
+                                </copy>
+                                <copy todir="${cloud}/geoportal/charts/mosaikit">
+                                    <fileset dir="${mosaikit.directory}/charts/mosaikit"/>
+                                </copy>
+                                <zip destfile="${project.build.directory}/geoportal-cloud-${project.version}.zip">
+                                    <zipfileset dir="${cloud}" prefix="geoportal-cloud"/>
+                                </zip>
+                            </target>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>3.6.1</version>
+                <executions>
+                    <execution>
+                        <id>attach-distributions</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>attach-artifact</goal>
+                        </goals>
+                        <configuration>
+                            <artifacts>
+                                <artifact>
+                                    <file>${project.build.directory}/geoportal-installation-${project.version}.zip</file>
+                                    <type>zip</type>
+                                    <classifier>installation</classifier>
+                                </artifact>
+                                <artifact>
+                                    <file>${project.build.directory}/geoportal-server-${project.version}.zip</file>
+                                    <type>zip</type>
+                                    <classifier>server</classifier>
+                                </artifact>
+                                <artifact>
+                                    <file>${project.build.directory}/geoportal-cloud-${project.version}.zip</file>
+                                    <type>zip</type>
+                                    <classifier>cloud</classifier>
+                                </artifact>
+                            </artifacts>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <!-- Last, so that its execution of the profile portable runs after the distributions are
+                     written (same phase). In initialize, before unpacking them: the distributions of Mosaikit in the local Maven repository
+                     are brought up to the snapshot published from its main branch, when they are older
+                     (a build had used one left there weeks before). -->
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.5.1</version>
+                <executions>
+                    <execution>
+                        <id>mosaikit-snapshot</id>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${mosaikit.snapshot.skip}</skip>
+                            <executable>${java.home}/bin/java</executable>
+                            <arguments>
+                                <argument>${project.basedir}/tools/MosaikitSnapshot.java</argument>
+                                <argument>${settings.localRepository}</argument>
+                                <argument>${mosaikit.version}</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <profile>
+            <!-- On Windows "bash" is the one of WSL, which cannot run the build of the portable
+                 archives: Git Bash, where Git for Windows puts it (-Dportable.bash=... otherwise). -->
+            <id>windows</id>
+            <activation>
+                <os>
+                    <family>windows</family>
+                </os>
+            </activation>
+            <properties>
+                <portable.bash>${env.PROGRAMFILES}/Git/bin/bash.exe</portable.bash>
+            </properties>
+        </profile>
+        <profile>
+            <!-- The portable archives, with the tools of the Mosaikit ones: the Java runtime and
+                 PostgreSQL are downloaded once into target/portable-cache. -->
+            <id>portable</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <version>3.5.1</version>
+                        <executions>
+                            <execution>
+                                <id>portable</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <configuration>
+                                    <executable>${portable.bash}</executable>
+                                    <arguments>
+                                        <argument>${project.basedir}/tools/portable.sh</argument>
+                                        <argument>${mosaikit.directory}/portable</argument>
+                                        <argument>${portable.platforms}</argument>
+                                        <argument>${dist.directory}/geoportal-portable</argument>
+                                    </arguments>
+                                    <environmentVariables>
+                                        <PORTABLE_INSTALLATION>${dist.directory}/geoportal</PORTABLE_INSTALLATION>
+                                        <PORTABLE_NAME>geoportal-portable</PORTABLE_NAME>
+                                        <PORTABLE_VERSION>${project.version}</PORTABLE_VERSION>
+                                        <PORTABLE_SETTINGS>${project.basedir}/portable/application.properties</PORTABLE_SETTINGS>
+                                        <PORTABLE_README>${project.basedir}/portable/README.md</PORTABLE_README>
+                                        <PORTABLE_CACHE>${project.basedir}/../.portable-cache</PORTABLE_CACHE>
+                                    </environmentVariables>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+</project>
