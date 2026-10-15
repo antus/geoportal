@@ -1,5 +1,4 @@
 -- SPDX-FileCopyrightText: 2026 Massimo Antonini
--- SPDX-License-Identifier: AGPL-3.0-or-later
 --
 -- Schema ext_catalog, owned by the extension and migrated by the kernel at start. Each dataset
 -- belongs to an organization, and row-level security shows each request only its own.
