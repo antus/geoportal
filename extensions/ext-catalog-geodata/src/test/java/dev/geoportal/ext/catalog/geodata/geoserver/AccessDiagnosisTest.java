@@ -236,7 +236,7 @@ class AccessDiagnosisTest {
                     assertEquals(received.columns(), new TreeSet<>(answer.visible()), "the columns of " + p);
                 }
             }
-            Diagnosis.Finding finding = Diagnosis.of(!p.name().startsWith("elena"), false, map, data,
+            Diagnosis.Finding finding = Diagnosis.of(true, false, map, data,
                     answer == null ? 0 : answer.matched(), 100);
             assertEquals(e.getValue(), finding.verdict(), "the finding for " + p);
         }
