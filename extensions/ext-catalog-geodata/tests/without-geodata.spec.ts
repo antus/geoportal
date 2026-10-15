@@ -1,4 +1,5 @@
 // SPDX-FileCopyrightText: 2026 Massimo Antonini
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { existsSync, mkdirSync, readdirSync, renameSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';

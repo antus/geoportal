@@ -1,4 +1,5 @@
 -- SPDX-FileCopyrightText: 2026 Massimo Antonini
+-- SPDX-License-Identifier: AGPL-3.0-or-later
 --
 -- GP-983, EXT-107: a dataset made from a file of the catalog reads its content through the catalog, with
 -- a signed link for the loader, and keeps no copy of it: file_id is null for such a dataset. The copies
