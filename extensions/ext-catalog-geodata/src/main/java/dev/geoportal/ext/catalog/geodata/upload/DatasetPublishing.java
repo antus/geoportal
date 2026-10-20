@@ -44,6 +44,10 @@ public class DatasetPublishing {
     @jakarta.inject.Inject
     CatalogStates states;
 
+    /** GP-986: the tables of connections that datasets map. */
+    @jakarta.inject.Inject
+    dev.geoportal.ext.catalog.geodata.connection.ConnectionLayerRepository connectionLayers;
+
     private static final Logger LOG = Logger.getLogger(DatasetPublishing.class);
 
     private final GeoServerGovernance geoserver;
@@ -345,10 +349,15 @@ public class DatasetPublishing {
 
     // Plumbing -----------------------------------------------------------------------------------
 
-    private static LayerDefinition definition(UploadedData data, String name, String style) {
+    private LayerDefinition definition(UploadedData data, String name, String style) {
         String description = data.description().length() <= 1000
                 ? data.description()
                 : data.description().substring(0, 997) + "...";
+        if (data.fromConnection()) {
+            // GP-986: the table of the connection, in the store of that connection, read where it is.
+            var source = connectionLayers.byDataset(data.id()).orElseThrow().source();
+            return new LayerDefinition(name, source.table(), data.title(), description, data.crs(), style, source.store());
+        }
         return new LayerDefinition(name, data.technicalName(), data.title(), description, data.crs(), style);
     }
 

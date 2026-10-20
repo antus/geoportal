@@ -21,7 +21,9 @@ public enum Format {
     KML("kml", "KML", "application/vnd.google-earth.kml+xml", true, "kml"),
     KMZ("kmz", "KMZ", "application/vnd.google-earth.kmz", true, "kmz"),
     CZML("czml", "CZML", "application/json", true, "czml"),
-    GEOTIFF("geotiff", "GeoTIFF", "image/tiff", false, "tif", "tiff");
+    GEOTIFF("geotiff", "GeoTIFF", "image/tiff", false, "tif", "tiff"),
+    /** GP-986: a table or view of a PostgreSQL connection, read where it is, never loaded nor uploaded. */
+    POSTGIS("postgis", "PostGIS table", "application/vnd.postgis.table", true);
 
     private final String id;
     private final String title;
@@ -60,6 +62,11 @@ public enum Format {
                 .toList());
     }
 
+    /** Whether files of this format are uploaded and loaded: all but the tables of connections (GP-986). */
+    public boolean uploadable() {
+        return !extensions.isEmpty();
+    }
+
     public String id() {
         return id;
     }
@@ -78,7 +85,7 @@ public enum Format {
      * image of the loader, which keeps their extended data (ADR-0026).
      */
     public boolean gdal() {
-        return this != CZML;
+        return this != CZML && this != POSTGIS;
     }
 
     /** Loaded into PostGIS when true, as a COG otherwise (GP-937). */

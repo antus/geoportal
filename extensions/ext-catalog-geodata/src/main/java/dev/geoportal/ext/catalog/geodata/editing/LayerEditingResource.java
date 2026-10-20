@@ -145,6 +145,8 @@ public class LayerEditingResource {
             return Failure.correct(400, "invalid", "The person is not an active member of the organization.").response();
         } catch (PublishedViews.Unavailable e) {
             return Failure.correct(409, "credential-missing", e.getMessage()).response();
+        } catch (IllegalStateException e) {
+            return Failure.correct(409, "read-only-source", e.getMessage()).response();
         }
         return Response.ok(surveyors(layer)).build();
     }

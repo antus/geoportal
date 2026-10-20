@@ -105,6 +105,10 @@ public class DatasetLoading {
      * @param layer the layer of a file with several, chosen by the person, or {@code null}
      */
     void load(UploadedData data, Integer declared, UUID previousCog, String layer) {
+        if (data.fromConnection()) {
+            throw new UploadedDatasets.UploadRefused(
+                    "This dataset is a table of a connection, read where it is: refresh it instead of loading it.");
+        }
         Instant now = Instant.now();
         Format format = Format.byId(data.format());
         String schema = Geodata.schema(organization.require());
@@ -368,6 +372,10 @@ public class DatasetLoading {
         }
         if (data.cogFileId() != null) {
             deleteFile(data.cogFileId());
+        }
+        if (data.fromConnection()) {
+            // GP-986: the table of a connection stays where it is, never touched.
+            return;
         }
         if (data.tableName() == null && data.loadTable() == null) {
             return;

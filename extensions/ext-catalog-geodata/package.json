@@ -18,6 +18,8 @@
     "@mosaikit/testing": "https://github.com/mosaikit/mosaikit/releases/download/snapshot/mosaikit-testing-latest.tgz",
     "@playwright/test": "^1.63.0",
     "@types/node": "^24.19.0",
+    "@types/pg": "^8.23.1",
+    "pg": "^8.23.1",
     "typescript": "~6.0.3"
   },
   "allowScripts": {

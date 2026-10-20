@@ -41,6 +41,8 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
         ? {
             'geoportal.geoserver.url': 'http://127.0.0.1:18680/geoserver',
             'geoportal.geodata.jdbc-url': 'jdbc:postgresql://127.0.0.1:15434/geodata',
+            // GP-986: the PostGIS that the bench reaches on the loopback is postgres:5432 for GeoServer.
+            'geoportal.geoserver.connection-hosts': '127.0.0.1:15434=postgres:5432',
           }
         : { 'geoportal.geoserver.url': 'http://127.0.0.1:9/geoserver' }),
       // With GEOPORTAL_TEST_GEODATA=1 and no GeoServer, the lighter PostGIS of tests/geodata/compose.yaml (GP-937).

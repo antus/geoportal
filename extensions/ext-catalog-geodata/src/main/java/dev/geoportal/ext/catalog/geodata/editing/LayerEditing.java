@@ -127,6 +127,11 @@ public class LayerEditing {
      * @throws NoSuchElementException when the account is not an active member of the organization
      */
     public LayerAssignment assign(PublishedLayer layer, UUID account) {
+        if (layer.definition().store() != null) {
+            // GP-986, ADR-0030: the table of a connection is read where it is, never written through GeoServer.
+            throw new IllegalStateException("The layer " + layer.name() + " reads a table of a connection, which is"
+                    + " not edited through Geoportal.");
+        }
         Optional<LayerAssignment> existing = assignments.ofLayer(layer.name()).stream()
                 .filter(a -> a.account().equals(account)).findFirst();
         if (existing.isPresent()) {

@@ -1,6 +1,10 @@
 {
   "description": "The extensions of mosaikit-ext that Geoportal composes (ADR-0024, GP-983), built from this commit by tools/mosaikit-ext.mjs until they are published packages.",
   "repository": "https://github.com/mosaikit/mosaikit-ext.git",
-  "commit": "2c43d8022f9f608a9f595172f721e68049203470",
-  "extensions": ["ext-catalog", "ext-catalog-connection"]
+  "commit": "09004a92c7e7a0afced047addeb0d0eee3f0af10",
+  "extensions": [
+    "ext-catalog",
+    "ext-catalog-connection",
+    "ext-catalog-connection-postgres"
+  ]
 }

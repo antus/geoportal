@@ -39,6 +39,10 @@ public class PublishedLayer {
     @Column(length = 63)
     private String style;
 
+    /** GP-986: the store of the connection whose table it serves; null for the store of the organization. */
+    @Column(length = 100)
+    private String store;
+
     @Column(nullable = false)
     private boolean retired;
 
@@ -85,6 +89,7 @@ public class PublishedLayer {
         this.description = definition.description();
         this.srs = definition.srs();
         this.style = definition.style();
+        this.store = definition.store();
         this.retired = false;
         this.updatedAt = now;
     }
@@ -163,6 +168,6 @@ public class PublishedLayer {
     }
 
     public LayerDefinition definition() {
-        return new LayerDefinition(name, tableName, title, description, srs, style);
+        return new LayerDefinition(name, tableName, title, description, srs, style, store);
     }
 }

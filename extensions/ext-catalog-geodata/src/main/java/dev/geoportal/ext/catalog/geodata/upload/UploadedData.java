@@ -144,6 +144,10 @@ public class UploadedData {
     @Column(nullable = false)
     private boolean sample;
 
+    /** GP-986: {@code file}, uploaded or a file of the catalog; {@code connection}, a table of a connection. */
+    @Column(nullable = false, length = 20)
+    private String source = "file";
+
     /** GP-983: the file of the catalog the dataset is made from, its parent; null when uploaded here. */
     @Column(name = "catalog_file")
     private UUID catalogFile;
@@ -276,6 +280,48 @@ public class UploadedData {
         this.space = result.bytes();
         this.loadedAt = now;
         this.updatedAt = now;
+    }
+
+    /**
+     * GP-986: a table of a PostgreSQL connection, read where it is: the dataset is ready to publish at once,
+     * with what the source says of the table; nothing is loaded and nothing is counted to the storage.
+     */
+    void mapped(String name, String table, String geometryType, Long rows, String code, Extent nativeExtent,
+            Extent wgs84, Instant now) {
+        this.source = "connection";
+        this.fileId = null;
+        this.fileName = name;
+        this.contentType = Format.POSTGIS.contentType();
+        this.size = 0;
+        this.format = Format.POSTGIS.id();
+        this.version++;
+        jobDone();
+        this.state = LOADED;
+        this.stateCode = null;
+        this.stateReason = null;
+        this.crs = code;
+        this.crsSource = "source";
+        this.geometryType = geometryType;
+        this.hasZ = false;
+        this.features = rows;
+        this.nativeMinX = nativeExtent == null ? null : nativeExtent.minX();
+        this.nativeMinY = nativeExtent == null ? null : nativeExtent.minY();
+        this.nativeMaxX = nativeExtent == null ? null : nativeExtent.maxX();
+        this.nativeMaxY = nativeExtent == null ? null : nativeExtent.maxY();
+        this.west = wgs84 == null ? null : wgs84.minX();
+        this.south = wgs84 == null ? null : wgs84.minY();
+        this.east = wgs84 == null ? null : wgs84.maxX();
+        this.north = wgs84 == null ? null : wgs84.maxY();
+        this.tableName = table;
+        this.cogFileId = null;
+        this.space = 0;
+        this.loadedAt = now;
+        this.updatedAt = now;
+    }
+
+    /** GP-986: whether the dataset is a table of a connection, read where it is. */
+    public boolean fromConnection() {
+        return "connection".equals(source);
     }
 
     /** Not loaded, for a problem of the file; nothing of it stays in PostGIS. */

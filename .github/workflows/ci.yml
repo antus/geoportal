@@ -178,7 +178,7 @@ jobs:
         run: |
           mvn -B -ntp package -DskipTests
           npx --yes playwright@1 install --with-deps chromium
-          npx playwright test tests/composition.spec.ts tests/catalog-files.spec.ts tests/access-rules.spec.ts tests/data-rules.spec.ts \
+          npx playwright test tests/composition.spec.ts tests/catalog-files.spec.ts tests/connection-map.spec.ts tests/access-rules.spec.ts tests/data-rules.spec.ts \
             tests/geoserver.spec.ts tests/organization-events.spec.ts tests/editing.spec.ts tests/rasters.spec.ts \
             tests/loading.spec.ts tests/publishing.spec.ts tests/style.spec.ts tests/symbology.spec.ts tests/console.spec.ts
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
