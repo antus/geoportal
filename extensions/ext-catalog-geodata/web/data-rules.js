@@ -213,6 +213,8 @@ export function dataRulesSection(context, publication, say) {
   section.querySelector('h4').textContent = t.title;
   section.querySelector('.hint').textContent = t.hint;
   section.querySelector('.add').textContent = t.add;
+  // Until the rules and the columns of the layer are read, a new rule has nothing to be written with.
+  section.querySelector('.add').disabled = true;
   let info;
 
   const subjectName = (r) => (r.subject.name ?? t.unknown);
