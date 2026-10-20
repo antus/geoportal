@@ -25,7 +25,7 @@ const TEXTS = {
     title: 'Dati geografici',
     views: 'Viste dei dati geografici',
     data: 'Dati',
-    access: 'Perché non vede i dati',
+    accessView: 'Perché non vede i dati',
     subtitle: 'I dati dello spazio: file, servizi, flussi in tempo reale, database ed elaborazioni.',
     search: 'Cerca nei dati geografici',
     themes: 'Temi',
@@ -47,7 +47,7 @@ const TEXTS = {
     title: 'Geodata',
     views: 'Views of the geodata',
     data: 'Data',
-    access: 'Why they cannot see the data',
+    accessView: 'Why they cannot see the data',
     subtitle: 'The data of the space: files, services, real-time streams, databases and processes.',
     search: 'Search the geodata',
     themes: 'Themes',
@@ -141,8 +141,8 @@ const extension = {
             <div><h1>${texts.title}</h1><p class="muted">${texts.subtitle}</p></div>
             <nav class="views" role="tablist" aria-label="${texts.views}">
               <button type="button" role="tab" data-view="data">${texts.data}</button>
-              <button type="button" role="tab" data-view="access">${texts.access}</button></nav>
-            <div class="view" data-view="access" role="tabpanel" aria-label="${texts.access}" hidden>
+              <button type="button" role="tab" data-view="access">${texts.accessView}</button></nav>
+            <div class="view" data-view="access" role="tabpanel" aria-label="${texts.accessView}" hidden>
               <geodata-access-diagnosis></geodata-access-diagnosis></div>
             <div class="view" data-view="data" role="tabpanel" aria-label="${texts.data}">
             <div class="bar"><input type="search" aria-label="${texts.search}" placeholder="${texts.search}" /></div>

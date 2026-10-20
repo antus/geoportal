@@ -137,6 +137,7 @@ const TEXTS = {
 
 const STYLE = `
   :host { display: block; }
+  [hidden] { display: none !important; }
   .diag { display: flex; flex-direction: column; gap: 14px; max-width: 920px; }
   h2 { margin: 0; font-size: 20px; }
   h3 { margin: 0; font-size: 15px; }
