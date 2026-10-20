@@ -142,6 +142,19 @@ public class UploadedDatasets {
         return true;
     }
 
+    /**
+     * GP-986, ADR-0030: the dataset of a table of a PostgreSQL connection, read where it is: registered as
+     * a resource of the person, shared on its own, ready to publish; nothing is stored nor loaded.
+     */
+    UploadedData fromConnection(String table, String title, String geometryType, Long rows, String crs,
+            dev.geoportal.ext.catalog.geodata.load.Extent nativeExtent, dev.geoportal.ext.catalog.geodata.load.Extent wgs84) {
+        UploadedData data = create(table, title, "", false, null);
+        data.mapped(table, table, geometryType, rows, crs, nativeExtent, wgs84, Instant.now());
+        record("dataset.mapped", data, Map.of());
+        uploads.insert(data);
+        return data;
+    }
+
     /** The reference of a file of the catalog of mosaikit-ext, the parent of its dataset. */
     public static ResourceRef catalogFile(UUID file) {
         return new ResourceRef(CATALOG, "file", file.toString());

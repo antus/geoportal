@@ -3,7 +3,9 @@
 import { existsSync, mkdirSync, readdirSync, renameSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
+import { startPostgres } from '@mosaikit/testing';
 import { api, apps, bench, member, restart, signIn, unique } from '@mosaikit/testing/playwright';
+import pg from 'pg';
 import { CONNECTIONS, FILE_MANAGER, GEODATA } from './composition.js';
 
 /**
@@ -60,10 +62,33 @@ const app = (page: Page) => page.locator('mosaikit-ext-catalog');
 const row = (page: Page, name: string) =>
   app(page).getByRole('table', { name: /^(Content of|Contenuto di) / }).getByRole('row').filter({ hasText: name });
 
-test('GP-983 without ext-catalog-geodata the installation manages files and connections, and the geodata files show the placeholder of an absent extension', async ({
+test('GP-983 GP-986 without ext-catalog-geodata the installation manages files and connections, the geodata files show the placeholder of an absent extension, and a table with geometries is a plain piece without the use Map', async ({
   page,
 }) => {
   test.setTimeout(400_000);
+  // GP-986: a PostgreSQL connection with a table that holds geometries, as the connector names them.
+  const source = await startPostgres({ directory: `.mosaikit-bench/gp986-absent-${Date.now().toString(36)}`, persistent: false, database: 'fonte' });
+  const client = new pg.Client({ host: '127.0.0.1', port: source.port, user: source.user, password: source.password, database: 'fonte' });
+  await client.connect();
+  await client.query(`create type public.geometry as (x double precision, y double precision);
+    create schema rete; create table rete.fermate (id integer primary key, nome text, posizione public.geometry);
+    insert into rete.fermate values (1, 'Piazza', null)`);
+  await client.end();
+  const slug = bench().organization.slug;
+  await api(bench().admin, `/api/v1/organizations/${slug}/members/${member(1).user}`, {
+    method: 'PUT', body: JSON.stringify({ roles: ['organization-user', 'organization-admin'] }),
+  });
+  const secret = unique('gp986-absent').replaceAll(' ', '-');
+  expect((await api(member(1), `/api/v1/organizations/${slug}/secrets`, {
+    method: 'POST', body: JSON.stringify({ name: secret, kind: 'password', value: source.password }),
+  })).status).toBe(201);
+  const created = await api(owner(), '/api/v1/ext/connections/connections', {
+    method: 'POST',
+    body: JSON.stringify({ name: unique('Fonte assente'), type: 'postgres', credential: secret,
+      settings: { host: '127.0.0.1', port: source.port, database: 'fonte', user: source.user, sslmode: 'disable' } }),
+  });
+  expect(created.status, JSON.stringify(created.body)).toBe(201);
+  const conn = created.body as { id: string; name: string };
   const top = await folder(unique('Senza geodati'));
   const name = `${unique('fermate').toLowerCase().replace(/\W+/g, '_')}.geojson`;
   const geodata = await store(top.id, name, STOPS, 'application/geo+json');
@@ -105,6 +130,18 @@ test('GP-983 without ext-catalog-geodata the installation manages files and conn
     // Connections are managed: their list and the connectors installed answer.
     expect((await api(owner(), '/api/v1/ext/connections/connections')).status).toBe(200);
     expect((await api(owner(), '/api/v1/ext/connections/connectors')).status).toBe(200);
+    // GP-986: the PostgreSQL connection lists its tables, the geometry column among the facts, and answers
+    // queries, as any connection; the use Map is not offered (below, in its page).
+    const contents = await api(owner(), `/api/v1/ext/connections/connections/${conn.id}/contents?parent=rete`);
+    expect(contents.status, JSON.stringify(contents.body)).toBe(200);
+    const fermate = (contents.body as { items: { name: string; facts: { geometry?: unknown[] } | null }[] }).items
+      .find((p) => p.name === 'fermate');
+    expect(fermate?.facts?.geometry).toBeTruthy();
+    const query = await api(owner(), `/api/v1/ext/connections/connections/${conn.id}/query`, {
+      method: 'POST', body: JSON.stringify({ statement: 'select nome from rete.fermate', limit: 10 }),
+    });
+    expect(query.status, JSON.stringify(query.body)).toBe(200);
+    expect(JSON.stringify(query.body)).toContain('Piazza');
     // The API of the geodata is gone with them.
     expect((await api(owner(), '/api/v1/ext/catalog-geodata/uploads')).status).toBe(404);
 
@@ -119,6 +156,15 @@ test('GP-983 without ext-catalog-geodata the installation manages files and conn
     await expect(row(page, name).getByRole('button', { name: /^Publish as a service/ })).toHaveCount(0);
     await expect(row(page, 'nuove.geojson').getByRole('note')).toHaveCount(0);
     await page.screenshot({ path: 'test-results/gp983-without-geodata.png', fullPage: true });
+
+    // GP-986: in the page of the connections, the table with geometries offers no use Map.
+    await page.goto(`${bench().baseUrl}/app/connections`);
+    await page.getByRole('button', { name: conn.name, exact: true }).click();
+    const region = page.getByRole('region', { name: `Contents of ${conn.name}` });
+    await region.getByRole('button', { name: 'rete', exact: true }).click();
+    await expect(region.locator('ul.entries > li[data-id="rete/fermate"]')).toBeVisible();
+    await expect(region.locator(`ul.entries > li[data-id="rete/fermate"] li[data-use="${GEODATA}/map"]`)).toHaveCount(0);
+    await page.screenshot({ path: 'test-results/gp986-without-geodata.png', fullPage: true });
   } finally {
     // Installed again whatever happened, for the other tests.
     for (const entry of ours) {
@@ -127,6 +173,7 @@ test('GP-983 without ext-catalog-geodata the installation manages files and conn
       }
     }
     await restart();
+    await source.stop();
   }
 
   // Back: the file it knew is geodata again, and the GeoJSON stored meanwhile is recognized.

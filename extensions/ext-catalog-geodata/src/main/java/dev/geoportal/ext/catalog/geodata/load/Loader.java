@@ -85,6 +85,7 @@ public final class Loader {
             case KMZ -> KmlReader.read(Archives.kml(content));
             case CZML -> CzmlReader.read(content);
             case GEOTIFF -> throw new IllegalArgumentException("A GeoTIFF is a raster");
+            case POSTGIS -> throw new IllegalArgumentException("A table of a connection is read where it is (GP-986)");
         };
     }
 

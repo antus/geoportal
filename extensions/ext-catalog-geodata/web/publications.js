@@ -55,10 +55,16 @@ import { drawPreview, legendImage, miniature, SYMBOLOGY_STYLE, symbolSvg } from 
 const API = '/api/v1/ext/catalog-geodata/publications';
 const GEOSERVER = '/api/v1/ext/catalog-geodata/geoserver';
 export const CHANGED = 'catalog-publications-changed';
+/** The source picker of the connections of mosaikit-ext (EXT-026), defined by the framework in the page. */
+const PICKER = 'mosaikit-ext-catalog-connection-picker';
 
 const TEXTS = {
   it: {
     title: 'Servizi pubblicati',
+    fromConnection: 'Mappa una tabella di una connessione',
+    mapping: 'Pubblicazione della tabella…',
+    mapped: (layer) => `La tabella è pubblicata come livello ${layer}, letta dove si trova.`,
+    mapRefused: (detail) => `La tabella non è pubblicata: ${detail}`,
     subtitle: 'I dati caricati che GeoServer serve come livelli del workspace dell’organizzazione, con il loro stato.',
     columns: ['Livello', 'Dato', 'Stato del servizio'],
     none: 'Nessun dato pubblicato.',
@@ -266,6 +272,10 @@ const TEXTS = {
   },
   en: {
     title: 'Published services',
+    fromConnection: 'Map a table of a connection',
+    mapping: 'Publishing the table…',
+    mapped: (layer) => `The table is published as the layer ${layer}, read where it is.`,
+    mapRefused: (detail) => `The table is not published: ${detail}`,
     subtitle: 'The uploaded data that GeoServer serves as layers of the workspace of the organization, with their state.',
     columns: ['Layer', 'Dataset', 'Service state'],
     none: 'No published data.',
@@ -1306,6 +1316,7 @@ export function definePublications(context) {
         <style>${STYLE}${SYMBOLOGY_STYLE}</style>
         <section aria-labelledby="pub-title">
           <div><h2 id="pub-title">${tx.title}</h2><p class="muted small">${tx.subtitle}</p></div>
+          <div class="actions from-connection" hidden><button type="button" class="map-connection">${tx.fromConnection}</button></div>
           <p class="muted note" aria-live="polite"></p>
           <table><thead><tr>${tx.columns.map((c) => `<th>${c}</th>`).join('')}</tr></thead><tbody></tbody></table>
           <div class="panel detail" hidden></div>
@@ -1319,6 +1330,10 @@ export function definePublications(context) {
       this.root = root;
       root.querySelector('.compare').addEventListener('click', () => void this.reconcile(false));
       root.querySelector('.align').addEventListener('click', () => void this.reconcile(true));
+      // GP-986: a table of a connection as a layer, chosen in the source picker of the connections (EXT-026),
+      // when the picker is in the page and the person may publish.
+      root.querySelector('.map-connection').addEventListener('click', () => void this.mapConnection());
+      void this.offerConnections();
       this.onChanged = () => void this.load();
       window.addEventListener(CHANGED, this.onChanged);
       void this.load();
@@ -1327,6 +1342,41 @@ export function definePublications(context) {
 
     disconnectedCallback() {
       window.removeEventListener(CHANGED, this.onChanged);
+    }
+
+    async offerConnections() {
+      if (!customElements.get(PICKER)) {
+        return;
+      }
+      const response = await context.fetch('/api/v1/ext/catalog-geodata/uploads/space');
+      const space = response.ok ? await response.json() : {};
+      this.root.querySelector('.from-connection').hidden = !space.canPublish;
+    }
+
+    /** GP-986: picks a table of a connection for the use "map", and publishes it as a layer. */
+    async mapConnection() {
+      const tx = t();
+      const picker = document.createElement(PICKER);
+      picker.extension = context.extension?.id ?? 'dev.geoportal.ext.catalog.geodata';
+      picker.uses = ['map'];
+      picker.multiple = false;
+      const references = await picker.pick();
+      if (!references || references.length === 0) {
+        return;
+      }
+      this.say(tx.mapping);
+      const response = await context.fetch('/api/v1/ext/catalog-geodata/connection-layers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reference: references[0] }),
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        this.say(tx.mapRefused(body.detail ?? body.title ?? String(response.status)));
+        return;
+      }
+      this.say(tx.mapped(body.layer));
+      window.dispatchEvent(new CustomEvent(CHANGED));
     }
 
     /** Says what happened; the message stays when the list is drawn again after the change. */

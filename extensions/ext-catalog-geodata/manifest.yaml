@@ -159,6 +159,18 @@ contributes:
           state.published: Pubblicato
           state.failed: Non caricato
           action.publish: Pubblica come servizio
+  # GP-986: a table or view with a geometry column of a connection is offered for the use "map" (EXT-019);
+  # chosen in the source picker of the connections (EXT-026), it becomes a layer, read where it is.
+  catalog.connection.use:
+    - id: map
+      title: Map
+      description: The rows of a table with a geometry, as a layer of the maps, read where they are.
+      kinds: [table, view]
+      facts: [geometry]
+      i18n:
+        it:
+          title: Mappa
+          description: Le righe di una tabella con una geometria, come livello delle mappe, lette dove sono.
   # The page of a link to a dataset (GP-336): its published layer, for people without an account.
   shared.view:
     - id: dataset

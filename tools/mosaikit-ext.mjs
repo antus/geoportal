@@ -108,6 +108,12 @@ export function packages() {
       throw new Error(`${extension}: expected one package in ${join(folder, 'target')}, found ${made.length}`);
     }
     copyFileSync(join(folder, 'target', made[0]), join(PACKAGES, made[0]));
+    // The package in the local Maven repository too, where an extension that requires it (a connector
+    // requires its framework) finds it as a zip, as a product does.
+    const version = made[0].slice(extension.length + 1, -'.zip'.length);
+    run('mvn', ['-B', '-q', '-ntp', 'install:install-file', `-Dfile=${join('target', made[0])}`,
+      '-DgroupId=io.github.mosaikit.ext', `-DartifactId=${extension}`, `-Dversion=${version}`, '-Dpackaging=zip',
+      '-DgeneratePom=true'], folder);
   }
   writeFileSync(APIS, installed.map((path) => `${path}\n`).join(''));
   writeFileSync(STAMP, `${wanted}\n`);

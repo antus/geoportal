@@ -59,6 +59,9 @@ public class GeoServerGovernance {
     private final Publications publications;
     private final CurrentOrganization organization;
     private final Credentials secrets;
+    /** GP-986: the stores of the connections whose tables the layers serve. */
+    @jakarta.inject.Inject
+    dev.geoportal.ext.catalog.geodata.connection.ConnectionStores connectionStores;
     private final AuditLog audit;
     private final Event<Aligned> aligned;
     /** One alignment at a time per organization, in this process. */
@@ -111,6 +114,7 @@ public class GeoServerGovernance {
             List<PublishedLayer> layers = publications.layers();
             List<PublishedStyle> styles = publications.styles();
             Alignment result;
+            Map<String, ConnectionStore> connections = Map.of();
             try (Credential gs = credential(GEOSERVER_CREDENTIAL);
                     Credential db = credential(GEODATA_CREDENTIAL)) {
                 Config config = ConfigProvider.getConfig();
@@ -120,6 +124,10 @@ public class GeoServerGovernance {
                 String database = setting(config, "geoportal.geodata.database", "geodata");
                 String jdbc = setting(config, "geoportal.geodata.jdbc-url",
                         "jdbc:postgresql://" + host + ":" + port + "/" + database);
+                // GP-986: the stores of the connections whose tables the layers serve.
+                connections = connectionStores.stores(layers.stream()
+                        .filter(l -> !l.retired() && l.definition().store() != null)
+                        .map(l -> l.definition().store()).collect(java.util.stream.Collectors.toSet()));
                 Desired desired = new Desired(
                         new StoreConnection(host, port, database, db.user, db.password),
                         // Rasters are coverages, published with their file (GP-309): not feature types.
@@ -127,7 +135,8 @@ public class GeoServerGovernance {
                         styles.stream().filter(s -> !s.retired()).map(PublishedStyle::definition).toList(),
                         names(layers.stream().filter(PublishedLayer::retired).map(PublishedLayer::name).toList()),
                         names(styles.stream().filter(PublishedStyle::retired).map(PublishedStyle::name).toList()),
-                        names(layers.stream().filter(l -> !l.retired() && l.raster()).map(PublishedLayer::name).toList()));
+                        names(layers.stream().filter(l -> !l.retired() && l.raster()).map(PublishedLayer::name).toList()),
+                        connections);
                 Reconciler reconciler = new Reconciler(
                         new GeoServerClient(URI.create(url), gs.user, gs.password),
                         new JdbcGeodataSchemas(jdbc, db.user, db.password));
@@ -138,6 +147,12 @@ public class GeoServerGovernance {
                             AuditLog.Outcome.FAILED, Map.of("error", e.getMessage())));
                 }
                 throw e;
+            } finally {
+                connections.values().forEach(c -> {
+                    if (c.password() != null) {
+                        Arrays.fill(c.password(), '\0');
+                    }
+                });
             }
             if (apply) {
                 forgetDeleted(result, layers, styles);

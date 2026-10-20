@@ -451,6 +451,54 @@ test('GP-335 GP-308 data rules hold the same for a person through the gateway an
   }
 });
 
+test('GP-986 a table of a PostgreSQL connection mapped as a layer is read through the gateway where it is, with the data rules applied', async () => {
+  // A table of the PostGIS of the stack, reached by Geoportal and GeoServer alike as postgres:5432.
+  const schema = `gp986_${run}`;
+  const psql = (statement: string): string => execFileSync('docker', ['exec', `${PROJECT}-postgres-1`, 'psql', '-U', 'geoserver',
+    '-d', 'geodata', '-At', '-c', statement], { encoding: 'utf8' }).trim();
+  psql(`create schema ${schema}; create table ${schema}.fermate (id integer primary key, nome text, geom geometry(Point, 4326));
+    insert into ${schema}.fermate values (1, 'Piazza', 'SRID=4326;POINT(12.5016 41.9009)'),
+      (2, 'Stazione', 'SRID=4326;POINT(12.5309 41.9105)'), (3, 'Porto', 'SRID=4326;POINT(12.4848 41.8722)')`);
+  const password = GS_DB.slice(GS_DB.indexOf(':') + 1);
+  const stored = await api(ada, `/api/v1/organizations/${ORG}/secrets`, { method: 'POST', org: ORG,
+    body: JSON.stringify({ name: 'gp986-geodata', kind: 'password', value: password, description: 'GP-986 a connection' }) });
+  expect(stored.status, JSON.stringify(stored.body)).toBeLessThan(300);
+  const made = await api(ada, '/api/v1/ext/connections/connections', { method: 'POST', org: ORG, body: JSON.stringify({
+    name: `Fonte ${run}`, type: 'postgres', credential: 'gp986-geodata',
+    settings: { host: 'postgres', port: 5432, database: 'geodata', user: 'geoserver', sslmode: 'disable' } }) });
+  expect(made.status, JSON.stringify(made.body)).toBe(201);
+  const layer = `fermate_${run}`;
+  const mapped = await api(ada, '/api/v1/ext/catalog-geodata/connection-layers', { method: 'POST', org: ORG, body: JSON.stringify({
+    layer,
+    reference: {
+      connection: { extension: 'io.github.mosaikit.ext.catalog.connection', type: 'connection', id: made.body.id },
+      part: { id: `${schema}/fermate`, parents: [schema], name: 'fermate', kind: 'table' },
+    } }) });
+  expect(mapped.status, JSON.stringify(mapped.body)).toBe(201);
+  const dataset = mapped.body.dataset as string;
+
+  // Ada reads the three stops through the gateway, and a stop added to the table at once: nothing was copied.
+  const ada1 = await features(await data(`/gw/ows/${ORG}/wfs?${getFeature(layer)}`, { cookie: await session(ada) }));
+  expect(ada1).toBe(3);
+  psql(`insert into ${schema}.fermate values (4, 'Mercato', 'SRID=4326;POINT(12.4930 41.8950)')`);
+  expect(await features(await data(`/gw/ows/${ORG}/wfs?${getFeature(layer)}`, { cookie: await session(ada) }))).toBe(4);
+
+  // Dan, shared at read with a data rule, reads only what the rule keeps, through the gateway.
+  const danId = ((await api(dan, '/api/v1/accounts/me', { org: ORG })).body as { id: string }).id;
+  const grant = await api(ada, `/api/v1/sharing/resources/${EXTENSION}/dataset/${dataset}/grants`, { method: 'PUT', org: ORG,
+    body: JSON.stringify({ subject: { kind: 'person', id: danId }, level: 'read' }) });
+  expect(grant.status, JSON.stringify(grant.body)).toBeLessThan(300);
+  const rule = await api(ada, '/api/v1/ext/catalog-geodata/data-rules', { method: 'POST', org: ORG,
+    body: JSON.stringify({ layer, subject: { kind: 'person', email: dan.user }, cql: "nome = 'Piazza'" }) });
+  expect(rule.status, JSON.stringify(rule.body)).toBe(201);
+  expect(await features(await data(`/gw/ows/${ORG}/wfs?${getFeature(layer)}`, { cookie: await session(dan) }))).toBe(1);
+
+  // Deleted, the layer goes; the table stays where it is.
+  expect((await api(ada, `/api/v1/ext/catalog-geodata/uploads/${dataset}`, { method: 'DELETE', org: ORG })).status).toBe(204);
+  expect(psql(`select count(*) from ${schema}.fermate`)).toBe('4');
+  psql(`drop schema ${schema} cascade`);
+});
+
 test('GP-936 a dataset shared at view lets the person see its layer through GeoServer, and revoked GeoServer refuses it', async () => {
   // Dan, a member with no share: GeoServer, which reads the GeoFence rules of the catalog, does not know the layer for him.
   const danId = ((await api(dan, '/api/v1/accounts/me', { org: ORG })).body as { id: string }).id;

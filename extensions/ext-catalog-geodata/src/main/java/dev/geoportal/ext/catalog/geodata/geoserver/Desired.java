@@ -3,6 +3,7 @@
 package dev.geoportal.ext.catalog.geodata.geoserver;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -13,6 +14,8 @@ import java.util.Set;
  *
  * @param rasters the raster layers the catalog publishes (GP-309): coverage stores named as them are not
  *     drift; they are published and withdrawn with their file, outside the alignment
+ * @param connections the stores of the connections whose tables the layers serve (GP-986), by name: made
+ *     and updated by the alignment; a store of a connection that no layer uses any more is deleted
  */
 public record Desired(
         StoreConnection store,
@@ -20,11 +23,17 @@ public record Desired(
         List<StyleDefinition> styles,
         Set<String> retiredLayers,
         Set<String> retiredStyles,
-        Set<String> rasters) {
+        Set<String> rasters,
+        Map<String, ConnectionStore> connections) {
 
     public Desired(StoreConnection store, List<LayerDefinition> layers, List<StyleDefinition> styles,
             Set<String> retiredLayers, Set<String> retiredStyles) {
-        this(store, layers, styles, retiredLayers, retiredStyles, Set.of());
+        this(store, layers, styles, retiredLayers, retiredStyles, Set.of(), Map.of());
+    }
+
+    public Desired(StoreConnection store, List<LayerDefinition> layers, List<StyleDefinition> styles,
+            Set<String> retiredLayers, Set<String> retiredStyles, Set<String> rasters) {
+        this(store, layers, styles, retiredLayers, retiredStyles, rasters, Map.of());
     }
 
     public Desired {
@@ -34,6 +43,7 @@ public record Desired(
         retiredLayers = Set.copyOf(retiredLayers);
         retiredStyles = Set.copyOf(retiredStyles);
         rasters = rasters == null ? Set.of() : Set.copyOf(rasters);
+        connections = connections == null ? Map.of() : Map.copyOf(connections);
     }
 
     /** Only the workspace and its store, nothing published yet. */

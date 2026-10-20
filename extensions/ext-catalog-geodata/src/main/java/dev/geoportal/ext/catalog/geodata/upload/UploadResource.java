@@ -148,7 +148,7 @@ public class UploadResource {
         Quota quota = datasets.space();
         return new Space(quota.used(), quota.limit().isPresent() ? quota.limit().getAsLong() : null,
                 permissions.has(EXTENSION, UPLOAD_DATA),
-                Arrays.stream(Format.values()).map(Format::title).toList(),
+                Arrays.stream(Format.values()).filter(Format::uploadable).map(Format::title).toList(),
                 permissions.has(EXTENSION, PublicationResource.PUBLISH), UploadLimit.bytes());
     }
 
@@ -259,6 +259,9 @@ public class UploadResource {
     public UploadView reload(@PathParam("id") UUID id, @QueryParam("crs") String crs, @QueryParam("layer") String layer) {
         sharing.require(ref(id), "edit-data");
         editing.requireSourceWrite(id);
+        if (find(id).fromConnection()) {
+            inCatalog(find(id), "");
+        }
         try {
             return view(datasets.reload(find(id), crs, layer));
         } catch (UploadedDatasets.UploadRefused e) {
@@ -274,6 +277,9 @@ public class UploadResource {
     public Response download(@PathParam("id") UUID id) {
         sharing.require(ref(id), "read");
         UploadedData data = find(id);
+        if (data.fromConnection()) {
+            inCatalog(data, "");
+        }
         // GP-983: a dataset made from a file of the catalog is that file, read through the catalog (EXT-107).
         java.io.InputStream stream;
         AutoCloseable closing;
@@ -379,7 +385,10 @@ public class UploadResource {
     @Transactional
     public Response delete(@PathParam("id") UUID id) {
         sharing.require(ref(id), "manage");
-        inCatalog(find(id), "Delete the file in the catalog: its dataset goes with it.");
+        if (!find(id).fromConnection()) {
+            // GP-986: the layer of a table of a connection is deleted here; the table stays where it is.
+            inCatalog(find(id), "Delete the file in the catalog: its dataset goes with it.");
+        }
         try {
             datasets.delete(find(id));
         } catch (SecurityException e) {
@@ -440,6 +449,15 @@ public class UploadResource {
      * and delete in the catalog; here the dataset only follows it (409 with what to do instead).
      */
     private static void inCatalog(UploadedData data, String what) {
+        if (data.fromConnection()) {
+            Map<String, Object> problem = new LinkedHashMap<>();
+            problem.put("title", "Conflict");
+            problem.put("status", 409);
+            problem.put("detail", "This dataset is a table of a connection, read where it is (GP-986): it has no file"
+                    + " to replace or download.");
+            throw new WebApplicationException("connection", Response.status(Response.Status.CONFLICT)
+                    .type("application/problem+json").entity(problem).build());
+        }
         if (data.catalogFile() == null) {
             return;
         }

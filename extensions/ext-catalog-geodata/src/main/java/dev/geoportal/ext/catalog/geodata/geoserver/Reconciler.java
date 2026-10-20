@@ -32,6 +32,9 @@ import java.util.StringJoiner;
  */
 public final class Reconciler {
 
+    /** The prefix of the stores of connections (GP-986), which the alignment owns as it owns its store. */
+    public static final String CONNECTION_STORE = "conn_";
+
     private final GeoServerClient geoserver;
     private final GeodataSchemas schemas;
 
@@ -124,6 +127,27 @@ public final class Reconciler {
             }
         }
 
+        // GP-986: the stores of the connections whose tables the layers serve, on the sources themselves.
+        Set<String> stores = new HashSet<>(geoserver.dataStores(ws));
+        Set<String> readyStores = new HashSet<>();
+        for (String name : sorted(desired.connections().keySet())) {
+            ConnectionStore connection = desired.connections().get(name);
+            if (!stores.contains(name)) {
+                if (connection.writable() && run.change("store", name, "create", "missing",
+                        () -> geoserver.putDataStore(ws, name, connection.parameters(), false))) {
+                    readyStores.add(name);
+                }
+                continue;
+            }
+            readyStores.add(name);
+            Optional<Map<String, String>> heldConnection = geoserver.dataStoreParameters(ws, name);
+            String differs = heldConnection.map(h -> differences(connection.comparable(), h)).orElse("");
+            if (!differs.isEmpty() && connection.writable()) {
+                run.change("store", name, "update", differs,
+                        () -> geoserver.putDataStore(ws, name, connection.parameters(), true));
+            }
+        }
+
         // Styles before layers, which name them.
         Set<String> styles = new HashSet<>(geoserver.styles(ws));
         for (StyleDefinition style : desired.styles()) {
@@ -142,7 +166,13 @@ public final class Reconciler {
         // Layers.
         Set<String> types = new HashSet<>(geoserver.featureTypes(ws));
         for (LayerDefinition layer : desired.layers()) {
-            FeatureType target = new FeatureType(layer.name(), layer.table(), OrganizationSpace.STORE, layer.title(),
+            String into = layer.storeOrDefault();
+            if (layer.store() != null && !readyStores.contains(into)) {
+                // The store of its connection could not be made (its credential cannot be read now).
+                run.planned("layer", layer.name(), "create", "store " + into + " missing");
+                continue;
+            }
+            FeatureType target = new FeatureType(layer.name(), layer.table(), into, layer.title(),
                     layer.description(), layer.srs(), "FORCE_DECLARED", true, true);
             Optional<FeatureType> held = types.contains(layer.name())
                     ? geoserver.featureType(ws, layer.name())
@@ -150,17 +180,17 @@ public final class Reconciler {
             boolean exists;
             if (held.isEmpty()) {
                 exists = run.change("layer", layer.name(), "create", "missing",
-                        () -> geoserver.createFeatureType(ws, OrganizationSpace.STORE, target));
-            } else if (!held.get().store().equals(OrganizationSpace.STORE)) {
-                // Moved to another store by hand: back to the store of the organization.
+                        () -> geoserver.createFeatureType(ws, into, target));
+            } else if (!held.get().store().equals(into)) {
+                // Moved to another store by hand, or to the store of another source: back where it belongs.
                 exists = run.change("layer", layer.name(), "update", "store " + held.get().store(), () -> {
                     geoserver.deleteFeatureType(ws, held.get().store(), layer.name());
-                    geoserver.createFeatureType(ws, OrganizationSpace.STORE, target);
+                    geoserver.createFeatureType(ws, into, target);
                 });
             } else {
                 String differs = differences(target, held.get());
                 exists = differs.isEmpty() || run.change("layer", layer.name(), "update", differs,
-                        () -> geoserver.updateFeatureType(ws, OrganizationSpace.STORE, target));
+                        () -> geoserver.updateFeatureType(ws, into, target));
             }
             if (layer.style() != null && (exists || !apply)) {
                 String style = ws + ":" + layer.style();
@@ -186,6 +216,13 @@ public final class Reconciler {
             }
         }
 
+        // GP-986: the store of a connection that no layer uses any more goes (its layers went above).
+        for (String name : sorted(stores)) {
+            if (name.startsWith(CONNECTION_STORE) && !desired.connections().containsKey(name)) {
+                run.change("store", name, "delete", "no layer", () -> geoserver.deleteDataStore(ws, name));
+            }
+        }
+
         // Drift: what the workspace holds that Geoportal does not know.
         List<Drift> drift = new ArrayList<>();
         Set<String> knownLayers = new HashSet<>(desired.retiredLayers());
@@ -193,7 +230,8 @@ public final class Reconciler {
         Set<String> knownStyles = new HashSet<>(desired.retiredStyles());
         desired.styles().forEach(s -> knownStyles.add(s.name()));
         for (String s : sorted(geoserver.dataStores(ws))) {
-            if (!s.equals(OrganizationSpace.STORE)) {
+            if (!s.equals(OrganizationSpace.STORE) && !desired.connections().containsKey(s)
+                    && !s.startsWith(CONNECTION_STORE)) {
                 drift.add(new Drift("store", s));
             }
         }

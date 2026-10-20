@@ -37,6 +37,37 @@ extension the catalog keeps the kind and state of those files behind the placeho
 extension (MK-135, EXT-106). A PostGIS table as a part of a PostgreSQL connection offering the use "map"
 is GP-986; the external OGC services become the connector `ext-catalog-connection-ogc` (GP-957).
 
+## Tables of connections as layers (GP-986)
+
+A table or view with a geometry column of a PostgreSQL connection (the connector
+`ext-catalog-connection-postgres` of mosaikit-ext, EXT-040) becomes a layer read where it is
+([ADR-0030](../../docs/adr/0030-tables-of-connections-read-by-geoserver-where-they-are.md)):
+
+- **The use "map".** The geodata contribute it to the point `catalog.connection.use` of the connections
+  (EXT-019: kinds `table` and `view`, fact `geometry`): the page of a connection offers *Map* (*Mappa*) on
+  the pieces whose facts include a geometry column, while this extension is active.
+- **Chosen in the source picker.** *Mappa una tabella di una connessione*, in the services of the app,
+  opens the source picker of the connections (EXT-026) for the use `map`; the reference it returns is
+  sent to `POST connection-layers` (permission `publish`), which resolves it as the person with
+  `POST /api/v1/ext/connections/references/resolve` of the kernel (they must be allowed to use the
+  connection), asks the source about the table (type and reference system of the geometry, rows,
+  extent; read only), makes a dataset of source `connection` (`connection_layer` keeps the reference and
+  what it resolved to) and publishes it like any vector: sharing, GeoFence rules, data rules, the gate and
+  the gateway. Nothing is loaded, copied or counted to the storage; deleting the layer never touches the
+  source; the table is not edited through Geoportal (no surveyors).
+- **The credential.** The geodata read the credential of the connection by name from the secrets
+  service, at the moment they need it, and hand the password to GeoServer only: the alignment makes a
+  PostGIS store per connection and schema (`conn_<connection>[_<schema>]`) in the workspace of the
+  organization, which GeoServer keeps encrypted. The administrators allow it by meaning the credential
+  for every extension or for the geodata; one meant for the connections only is refused (409
+  `credential-not-readable`).
+- **API**: `POST connection-layers` `{reference, layer?, title?}` (201 `{dataset, layer}`); `GET
+  connection-layers/{dataset}` (the reference, the address, schema, table, column and the name of the
+  credential, never the credential); `POST connection-layers/{dataset}/refresh` (resolves the reference
+  again; level `manage`).
+- **Setting** `geoportal.geoserver.connection-hosts`: `host:port=host:port`, comma-separated, where
+  GeoServer reaches a source that the platform reaches elsewhere (Docker networks).
+
 ## Geodata files of the catalog
 
 The geodata are a kind of file of the catalog of mosaikit-ext (GP-983,
@@ -116,6 +147,7 @@ name the extension, such as `mosaikit.quotas.limits."dev.geoportal.catalog/data-
 | `db/` | Flyway migrations of the schema `ext_catalog_geodata`, run by the kernel at start; never edit an applied one (their checksums carry the data of the old catalog over, see Upgrading) |
 | `upgrade/adopt-catalog.sql` | The adoption of the data of the old catalog `dev.geoportal.catalog`, and the level download renamed read (GP-983) |
 | `upload/GeodataFileKind.java`, `upload/CatalogStates.java`, `web/kind.js` | The geodata files of the catalog of mosaikit-ext (GP-983, ADR-0028) |
+| `connection/`, `upload/ConnectionLayers.java`, `upload/ConnectionLayerResource.java`, `tests/connection-map.spec.ts` | Tables of PostgreSQL connections as layers (GP-986, ADR-0030) |
 | `tests/catalog-files.spec.ts`, `tests/without-geodata.spec.ts` | The tests of the geodata files of the catalog, and of an installation without this extension (GP-983) |
 | `tests/composition.ts`, `tests/composition.spec.ts` | The extensions of mosaikit-ext of the bench, and the tests of the composition (GP-983) |
 
