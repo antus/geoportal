@@ -1387,6 +1387,36 @@ export function definePublications(context) {
       return pill;
     }
 
+    /** The cell of the health of a layer in its row: the pill and, when it failed, why. */
+    healthCell(cell, p, tx) {
+      cell.replaceChildren(this.healthPill(p, tx));
+      if (p.health.status === 'failed' && p.health.code) {
+        const why = document.createElement('div');
+        why.className = 'small muted';
+        why.textContent = tx.healthCodes[p.health.code] ?? p.health.reason ?? '';
+        cell.append(why);
+      }
+    }
+
+    /**
+     * Draws again what the health of one layer changes: the cell of its row, and the detail when it is
+     * the one open. The other rows stay as they are, so that the checks run when the list is loaded do
+     * not redraw the whole table once per layer (the focus and the row under the pointer would be lost).
+     */
+    renderHealth(p) {
+      const tx = t();
+      const row = [...this.root.querySelectorAll('tbody tr.row')].find((r) => r.dataset.layer === p.name);
+      if (row) {
+        this.healthCell(row.children[2], p, tx);
+      } else {
+        this.render();
+        return;
+      }
+      if (this.chosen?.name === p.name) {
+        this.renderDetail();
+      }
+    }
+
     row(p, tx) {
       const row = document.createElement('tr');
       row.className = 'row';
@@ -1405,13 +1435,7 @@ export function definePublications(context) {
       if (badge) {
         row.children[0].append(' ', badge);
       }
-      row.children[2].append(this.healthPill(p, tx));
-      if (p.health.status === 'failed' && p.health.code) {
-        const why = document.createElement('div');
-        why.className = 'small muted';
-        why.textContent = tx.healthCodes[p.health.code] ?? p.health.reason ?? '';
-        row.children[2].append(why);
-      }
+      this.healthCell(row.children[2], p, tx);
       const open = () => {
         this.chosen = p;
         this.render();
@@ -1534,7 +1558,7 @@ export function definePublications(context) {
     /** Asks the catalog to check the service now; quietly on load, with the result in the panel on demand. */
     async check(p, quiet) {
       p.checking = true;
-      this.render();
+      this.renderHealth(p);
       const response = await context.fetch(`${API}/${encodeURIComponent(p.name)}/health`, { method: 'POST' });
       p.checking = false;
       if (response.ok) {
@@ -1543,10 +1567,13 @@ export function definePublications(context) {
         if (this.chosen?.name === p.name) {
           this.chosen = p;
         }
-      } else if (!quiet) {
-        this.root.querySelector('.detail .failure')?.replaceChildren(explain(context, response.status, await problemOf(response)));
+        this.renderHealth(p);
+      } else {
+        this.renderHealth(p);
+        if (!quiet) {
+          this.root.querySelector('.detail .failure')?.replaceChildren(explain(context, response.status, await problemOf(response)));
+        }
       }
-      this.render();
     }
 
     async openRepoint(p) {

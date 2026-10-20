@@ -72,7 +72,10 @@ test('issue #50 without a master key nor GeoServer, the first visit of an admini
     await visits(slug);
   } finally {
     // The person signs in to the organization of the bench in the other suites: not a member of two.
-    await api(bench().admin, `/api/v1/organizations/${slug}/members/${administrator().user}`, { method: 'DELETE' });
+    // Removing them is refused (409) since they own the samples (MK-071 of Mosaikit): the organization,
+    // which exists only for this test, goes with them.
+    const deleted = await api(bench().admin, `/api/v1/organizations/${slug}?confirmation=${slug}`, { method: 'DELETE' });
+    expect(deleted.status, JSON.stringify(deleted.body)).toBe(200);
   }
 });
 
