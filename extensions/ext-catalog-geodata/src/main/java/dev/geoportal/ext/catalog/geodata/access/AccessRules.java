@@ -118,6 +118,31 @@ public class AccessRules {
 
     /** The rule set of the organization of the request, from the published layers, their sharing and the data rules. */
     public Generated generate() {
+        return generate(java.util.function.UnaryOperator.identity(), true);
+    }
+
+    /**
+     * The rule set the organization would have with a data rule written or changed and not saved yet (GP-339):
+     * for the preview of the rule, never written nor kept.
+     *
+     * @param draft the rule as the page sends it, not saved
+     * @param replaces the rule it changes, or null for a new one
+     */
+    public Generated withDraft(DataRule draft, UUID replaces) {
+        return generate(all -> {
+            List<DataRule> list = new ArrayList<>(all.stream().filter(r -> !r.id().equals(replaces)).toList());
+            list.add(draft);
+            return list;
+        }, false);
+    }
+
+    /**
+     * The rule set from the data rules as {@code adjust} gives them.
+     *
+     * @param remember whether who data rules limit is kept for the gate ({@link #limitsOf}): only for the rules
+     *     that are saved
+     */
+    private Generated generate(java.util.function.UnaryOperator<List<DataRule>> adjust, boolean remember) {
         OrganizationSpace space = geoserver.space();
         List<String> warnings = new ArrayList<>();
         List<PublishedLayer> layers = geoserver.published();
@@ -149,7 +174,7 @@ public class AccessRules {
         }
         // GP-308: the people the data rules apply to, directly or through a team.
         Map<UUID, List<DataRule>> rules = new HashMap<>();
-        for (DataRule r : dataRules.all()) {
+        for (DataRule r : adjust.apply(dataRules.all())) {
             if (grants.containsKey(r.datasetId())) {
                 rules.computeIfAbsent(r.datasetId(), k -> new ArrayList<>()).add(r);
             }
@@ -236,7 +261,9 @@ public class AccessRules {
             }
             access.add(one);
         }
-        limitedPeople.put(space.organization(), new Limitations(limitedNames, Instant.now()));
+        if (remember) {
+            limitedPeople.put(space.organization(), new Limitations(limitedNames, Instant.now()));
+        }
         return new Generated(clipRasters(RuleSet.of(space.workspace(), space.organization(), access), layers), warnings);
     }
 
